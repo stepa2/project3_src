@@ -433,7 +433,7 @@ void MapbaseRPC_UpdateSteam( int iType, const char *pMapName )
 
 	DevMsg( "Updating Steam\n" );
 
-	if (pszStatus)
+	if (pszStatus && steamapicontext->SteamFriends() != nullptr)
 	{
 		steamapicontext->SteamFriends()->SetRichPresence( "gamestatus", pszStatus );
 		steamapicontext->SteamFriends()->SetRichPresence( "steam_display", "#SteamRPC_Status" );

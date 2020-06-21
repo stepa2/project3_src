@@ -4365,12 +4365,12 @@ void CHL2_Player::ModifyOrAppendPlayerCriteria( AI_CriteriaSet& set )
 #ifdef MAPBASE
 const char *CHL2_Player::GetOverrideStepSound( const char *pszBaseStepSoundName )
 {
-	const char *szSound = GetContextValue(FindContextByName("footsteps"));
-	if (szSound[0] != '\0')
-	{
-		return szSound;
-	}
-	return pszBaseStepSoundName;
+	int footstep_context = FindContextByName("footsteps");
+	if (footstep_context < 0) return pszBaseStepSoundName;
+
+	return  GetContextValue(footstep_context);
+
+	
 }
 #endif
 

@@ -1834,6 +1834,16 @@ void CBaseAnimating::BuildMatricesWithBoneMerge(
 
 		if ( !merged )
 		{
+			if(!q[i].IsValid())
+			{
+				Warning("CBaseAnimating::BuildMatricesWithBoneMerge: quaternion of bone %n of mesh %s is invalid", i, pStudioHdr->pszName());
+			}
+
+			if(!pos[i].IsValid())
+			{
+				Warning("CBaseAnimating::BuildMatricesWithBoneMerge: position of bone %n of mesh %s is invalid", i, pStudioHdr->pszName());
+			}
+			
 			// If we get down here, then the bone wasn't merged.
 			matrix3x4_t bonematrix;
 			QuaternionMatrix( q[i], pos[i], bonematrix );

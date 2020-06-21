@@ -1836,14 +1836,20 @@ void CBaseAnimating::BuildMatricesWithBoneMerge(
 		{
 			if(!q[i].IsValid())
 			{
-				Warning("CBaseAnimating::BuildMatricesWithBoneMerge: quaternion of bone %n of mesh %s is invalid", i, pStudioHdr->pszName());
+				Warning("CBaseAnimating::BuildMatricesWithBoneMerge: quaternion of bone %d of mesh %s is invalid\n", i, pStudioHdr->pszName());
+				if (developer.GetInt() >= 2)
+					NDebugOverlay::Cross3D(origin, 5, 255,0,0,true,1);
+				continue;
 			}
-
-			if(!pos[i].IsValid())
+				
+			if(!pos[i].IsValid()) 
 			{
-				Warning("CBaseAnimating::BuildMatricesWithBoneMerge: position of bone %n of mesh %s is invalid", i, pStudioHdr->pszName());
+				Warning("CBaseAnimating::BuildMatricesWithBoneMerge: position of bone %d of mesh %s is invalid\n", i, pStudioHdr->pszName());
+				if (developer.GetInt() >= 2)
+					NDebugOverlay::Cross3D(origin, 5, 255,0,0,true,1);
+				continue;
 			}
-			
+				
 			// If we get down here, then the bone wasn't merged.
 			matrix3x4_t bonematrix;
 			QuaternionMatrix( q[i], pos[i], bonematrix );

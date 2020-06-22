@@ -396,7 +396,7 @@ void CNPC_Advisor::Spawn()
 
 	NPCInit();
 
-	SetGoalEnt( NULL );
+	SetGoalEnt(nullptr );
 
 	AddEFlags( EFL_NO_DISSOLVE );
 }
@@ -440,15 +440,15 @@ void CNPC_Advisor::Activate()
 {
 	BaseClass::Activate();
 	
-	m_hLevitateGoal1  = gEntList.FindEntityGeneric( NULL, STRING( m_iszLevitateGoal1 ),  this );
-	m_hLevitateGoal2  = gEntList.FindEntityGeneric( NULL, STRING( m_iszLevitateGoal2 ),  this );
-	m_hLevitationArea = gEntList.FindEntityGeneric( NULL, STRING( m_iszLevitationArea ), this );
+	m_hLevitateGoal1  = gEntList.FindEntityGeneric(nullptr, STRING( m_iszLevitateGoal1 ),  this );
+	m_hLevitateGoal2  = gEntList.FindEntityGeneric(nullptr, STRING( m_iszLevitateGoal2 ),  this );
+	m_hLevitationArea = gEntList.FindEntityGeneric(nullptr, STRING( m_iszLevitationArea ), this );
 
 	m_levitateCallback.m_Advisor = this;
 
 #if NPC_ADVISOR_HAS_BEHAVIOR
 	// load the staging positions
-	CBaseEntity *pEnt = NULL;
+	CBaseEntity *pEnt = nullptr;
 	m_hvStagingPositions.EnsureCapacity(6); // reserve six
 
 	// conditional assignment: find an entity by name and save it into pEnt. Bail out when none are left.
@@ -552,7 +552,7 @@ bool CNPC_Advisor::CanLevitateEntity( CBaseEntity *pEntity, int minMass, int max
 
 	float mass = pPhys->GetMass();
 
-	return ( mass >= minMass && 
+	return ( //mass >= minMass && 
 			 mass <= maxMass && 
 			 //pEntity->VPhysicsGetObject()->IsAsleep() && 
 			 pPhys->IsMoveable() /* &&
@@ -566,7 +566,7 @@ bool CNPC_Advisor::CanLevitateEntity( CBaseEntity *pEntity, int minMass, int max
 CBaseEntity *CNPC_Advisor::ThrowObjectPrepare()
 {
 
-	CBaseEntity *pThrowable = NULL;
+	CBaseEntity *pThrowable = nullptr;
 	while (m_hvStagedEnts.Count() > 0)
 	{
 		pThrowable = m_hvStagedEnts[0];
@@ -579,7 +579,7 @@ CBaseEntity *CNPC_Advisor::ThrowObjectPrepare()
 				// reject!
 				
 				Write_BeamOff(m_hvStagedEnts[0]);
-				pThrowable = NULL;
+				pThrowable = nullptr;
 			}
 		}
 
@@ -614,7 +614,7 @@ CBaseEntity *CNPC_Advisor::ThrowObjectPrepare()
 	}
 	else // we had nothing to throw
 	{
-		return NULL;
+		return nullptr;
 	}
 }
 
@@ -661,58 +661,6 @@ void CNPC_Advisor::StartTask( const Task_t *pTask )
 				}
 			}
 
-			/*
-			// this is the old mechanism, using a hardcoded box and an entity enumerator. 
-			// since deprecated.
-
-			else
-			{
-				CBaseEntity *list[128];
-				
-				m_physicsObjects.RemoveAll();
-
-				//NDebugOverlay::Box( GetAbsOrigin(), Vector( -408, -368, -188 ), Vector( 92, 208, 168 ), 255, 255, 0, 1, 5 );
-				
-				// one-off class used to determine which entities we want from the UTIL_EntitiesInBox
-				class CAdvisorLevitateEntitiesEnum : public CFlaggedEntitiesEnum
-				{
-				public:
-					CAdvisorLevitateEntitiesEnum( CBaseEntity **pList, int listMax, int nMinMass, int nMaxMass )
-					:	CFlaggedEntitiesEnum( pList, listMax, 0 ),
-						m_nMinMass( nMinMass ),
-						m_nMaxMass( nMaxMass )
-					{
-					}
-
-					virtual IterationRetval_t EnumElement( IHandleEntity *pHandleEntity )
-					{
-						CBaseEntity *pEntity = gEntList.GetBaseEntity( pHandleEntity->GetRefEHandle() );
-						if ( AdvisorCanLevitateEntity( pEntity, m_nMinMass, m_nMaxMass ) )
-						{
-							return CFlaggedEntitiesEnum::EnumElement( pHandleEntity );
-						}
-						return ITERATION_CONTINUE;
-					}
-
-					int m_nMinMass;
-					int m_nMaxMass;
-				};
-
-				CAdvisorLevitateEntitiesEnum levitateEnum( list, ARRAYSIZE( list ), 10, 220 );
-
-				int nCount = UTIL_EntitiesInBox( GetAbsOrigin() - Vector( 554, 368, 188 ), GetAbsOrigin() + Vector( 92, 208, 168 ), &levitateEnum );
-				for ( int i = 0; i < nCount; i++ )
-				{
-					//Msg( "%d found %s\n", m_physicsObjects.Count(), STRING( list[i]->GetModelName() ) );
-					if ( list[i]->GetMoveType() == MOVETYPE_VPHYSICS )
-					{
-						//Msg( "   %d added %s\n", m_physicsObjects.Count(), STRING( list[i]->GetModelName() ) );
-						m_physicsObjects.AddToTail( list[i] );
-					}
-				}
-			}
-			*/
-
 			if ( m_physicsObjects.Count() > 0 )
 			{
 				TaskComplete();
@@ -747,7 +695,7 @@ void CNPC_Advisor::StartTask( const Task_t *pTask )
 			Write_AllBeamsOff();
 			m_hvStagedEnts.RemoveAll();
 
-			m_OnPickingThrowable.FireOutput(NULL,this);
+			m_OnPickingThrowable.FireOutput(nullptr,this);
 			m_flStagingEnd = gpGlobals->curtime + pTask->flTaskData;
 
 			break;
@@ -774,12 +722,11 @@ void CNPC_Advisor::StartTask( const Task_t *pTask )
 		{
 
 			// should never be here
-			/*
+			
 			Assert( m_hPlayerPinPos.IsValid() );
 			m_playerPinFailsafeTime = gpGlobals->curtime + 10.0f;
 
 			break;
-			*/
 		}
 
 		default:
@@ -789,6 +736,7 @@ void CNPC_Advisor::StartTask( const Task_t *pTask )
 	}
 }
 
+#include <utility>
 
 //-----------------------------------------------------------------------------
 // todo: find a way to guarantee that objects are made pickupable again when bailing out of a task
@@ -817,7 +765,7 @@ void CNPC_Advisor::RunTask( const Task_t *pTask )
 				// swap them if necessary (1 must be the bottom)
 				if (m_levitateCallback.m_vecGoalPos1.z > m_levitateCallback.m_vecGoalPos2.z)
 				{
-					swap(m_levitateCallback.m_vecGoalPos1,m_levitateCallback.m_vecGoalPos2);
+					std::swap(m_levitateCallback.m_vecGoalPos1,m_levitateCallback.m_vecGoalPos2);
 				}
 
 				m_levitateCallback.m_flFloat = 0.06f; // this is an absolute accumulation upon gravity
@@ -839,21 +787,8 @@ void CNPC_Advisor::RunTask( const Task_t *pTask )
 				}
 			}
 
-			/*
-			// Draw boxes around the objects we're levitating.
-			for ( int i = 0; i < m_physicsObjects.Count(); i++ )
-			{
-				CBaseEntity *pEnt = m_physicsObjects.Element( i );
-				if ( !pEnt )
-					continue;	// The prop has been broken!
-
-				IPhysicsObject *pPhys = pEnt->VPhysicsGetObject();
-				if ( pPhys && pPhys->IsMoveable() )
-				{
-					NDebugOverlay::Box( pEnt->GetAbsOrigin(), pEnt->CollisionProp()->OBBMins(), pEnt->CollisionProp()->OBBMaxs(), 0, 255, 0, 1, 0.1 );
-				}
-			}*/
-
+			
+			
 			break;
 		}	
 		
@@ -963,7 +898,7 @@ void CNPC_Advisor::RunTask( const Task_t *pTask )
 			}
 
 			// If we've gone NULL, then opt out
-			if ( pThrowable == NULL )
+			if ( pThrowable == nullptr )
 			{
 				TaskComplete();
 				break;
@@ -1011,7 +946,7 @@ void CNPC_Advisor::RunTask( const Task_t *pTask )
 
 		case TASK_ADVISOR_PIN_PLAYER:
 		{
-			/*
+			
 			// bail out if the pin entity went away.
 			CBaseEntity *pPinEnt = m_hPlayerPinPos;
 			if (!pPinEnt)
@@ -1057,7 +992,7 @@ void CNPC_Advisor::RunTask( const Task_t *pTask )
 			GetEnemy()->SetAbsOrigin( nuPos );
 
 			break;
-			*/
+			
 		}
 
 		default:
@@ -1110,11 +1045,11 @@ CBaseEntity *CNPC_Advisor::PickThrowable( bool bRequireInView )
 	CBasePlayer *pPlayer = ToBasePlayer( GetEnemy() );
 	Assert(pPlayer);
 	if (!pPlayer)
-		return NULL;
+		return nullptr;
 
 	const int numObjs = m_physicsObjects.Count(); ///< total number of physics objects in my system
 	if (numObjs < 1) 
-		return NULL; // bail out if nothing available
+		return nullptr; // bail out if nothing available
 
 	
 	// used for require-in-view
@@ -1195,7 +1130,7 @@ CBaseEntity *CNPC_Advisor::PickThrowable( bool bRequireInView )
 	}
 
 	if ( numCandidates == 0 )
-		return NULL; // must have at least one candidate
+		return nullptr; // must have at least one candidate
 
 	// pick a random candidate.
 	int nRandomIndex = random->RandomInt( 0, numCandidates - 1 );
@@ -1249,7 +1184,7 @@ void CNPC_Advisor::HurlObjectAtPlayer( CBaseEntity *pEnt, const Vector &leadVel 
 	VectorNormalize( vecThrowDir );
 	
 	Vector vecVelocity = flVelocity * vecThrowDir;
-	pPhys->SetVelocity( &vecVelocity, NULL );
+	pPhys->SetVelocity( &vecVelocity, nullptr );
 
 	AddToThrownObjects(pEnt);
 
@@ -1314,7 +1249,7 @@ void CNPC_Advisor::PreHurlClearTheWay( CBaseEntity *pThrowable, const Vector &to
 			}
 
 			// heave!
-			pPhys->AddVelocity( &thrust, NULL );
+			pPhys->AddVelocity( &thrust, nullptr );
 		}
 	}
 
@@ -1389,7 +1324,7 @@ bool CNPC_Advisor::DidThrow(const CBaseEntity *pEnt)
 		{
 			if ( m_flaRecentlyThrownObjectTimes[ii] < threeSecondsAgo )
 			{
-				m_haRecentlyThrownObjects[ii].Set(NULL);
+				m_haRecentlyThrownObjects[ii].Set(nullptr);
 				continue;
 			}
 			else if (pTestEnt == pEnt)
@@ -1509,7 +1444,7 @@ int CNPC_Advisor::SelectSchedule()
 		{
 			if ( GetEnemy() && GetEnemy()->IsAlive() )
 			{
-				if ( false /* m_hPlayerPinPos.IsValid() */ )
+				if ( m_hPlayerPinPos.IsValid() )
 					return SCHED_ADVISOR_TOSS_PLAYER;
 				else
 					return SCHED_ADVISOR_COMBAT;
@@ -1538,7 +1473,7 @@ Vector CNPC_Advisor::GetThrowFromPos( CBaseEntity *pEnt )
 	float howFarInFront = advisor_throw_stage_distance.GetFloat() + effecRadius * 1.43f;// clamp(lenToPlayer - posDist + effecRadius,effecRadius*2,90.f + effecRadius);
 	
 	Vector fwd;
-	GetVectors(&fwd,NULL,NULL);
+	GetVectors(&fwd, nullptr, nullptr);
 	
 	return GetAbsOrigin() + fwd*howFarInFront;
 }
@@ -1654,11 +1589,11 @@ void CNPC_Advisor::InputPinPlayer( inputdata_t &inputdata )
 	// null string means designer is trying to unpin the player
 	if (!targetname)
 	{
-		m_hPlayerPinPos = NULL;
+		m_hPlayerPinPos = nullptr;
 	}
 
 	// otherwise try to look up the entity and make it a target.
-	CBaseEntity *pEnt = gEntList.FindEntityByName(NULL,targetname);
+	CBaseEntity *pEnt = gEntList.FindEntityByName(nullptr,targetname);
 
 	if (pEnt)
 	{
@@ -1668,7 +1603,7 @@ void CNPC_Advisor::InputPinPlayer( inputdata_t &inputdata )
 	{
 		// if we couldn't find the target, just bail on the behavior.
 		Warning("Advisor tried to pin player to %s but that does not exist.\n", targetname.ToCStr());
-		m_hPlayerPinPos = NULL;
+		m_hPlayerPinPos = nullptr;
 	}
 }
 
@@ -1711,12 +1646,12 @@ void CNPC_Advisor::InputWrenchImmediate( inputdata_t &inputdata )
 
 	// for all entities with that name that aren't floating, punt them at me and add them to the levitation
 
-	CBaseEntity *pEnt = NULL;
+	CBaseEntity *pEnt = nullptr;
 
 	const Vector &myPos = GetAbsOrigin() + Vector(0,36.0f,0);
 
 	// conditional assignment: find an entity by name and save it into pEnt. Bail out when none are left.
-	while ( ( pEnt = gEntList.FindEntityByName(pEnt,groupname) ) != NULL )
+	while ( ( pEnt = gEntList.FindEntityByName(pEnt,groupname) ) != nullptr )
 	{
 		// if I'm not already levitating it, and if I didn't just throw it
 		if (!m_physicsObjects.HasElement(pEnt) )
@@ -1733,14 +1668,14 @@ void CNPC_Advisor::InputWrenchImmediate( inputdata_t &inputdata )
 
 				// first, kick it at me
 				Vector objectToMe;
-				pPhys->GetPosition(&objectToMe,NULL);
+				pPhys->GetPosition(&objectToMe, nullptr);
                 objectToMe = myPos - objectToMe;
 				// compute a velocity that will get it here in about a second
 				objectToMe /= (1.5f * gpGlobals->frametime);
 
 				objectToMe *= random->RandomFloat(0.25f,1.0f);
 
-				pPhys->SetVelocity( &objectToMe, NULL );
+				pPhys->SetVelocity( &objectToMe, nullptr );
 
 				// add it to tracked physics objects
 				m_physicsObjects.AddToTail( pEnt );
@@ -1799,7 +1734,7 @@ void CNPC_Advisor::Write_AllBeamsOff( void )
 void CNPC_Advisor::InputTurnBeamOn( inputdata_t &inputdata )
 {
 	// inputdata should specify a target
-	CBaseEntity *pTarget = gEntList.FindEntityByName( NULL, inputdata.value.StringID() );
+	CBaseEntity *pTarget = gEntList.FindEntityByName(nullptr, inputdata.value.StringID() );
 	if ( pTarget )
 	{
 		Write_BeamOn( pTarget );
@@ -1817,7 +1752,7 @@ void CNPC_Advisor::InputTurnBeamOn( inputdata_t &inputdata )
 void CNPC_Advisor::InputTurnBeamOff( inputdata_t &inputdata )
 {
 	// inputdata should specify a target
-	CBaseEntity *pTarget = gEntList.FindEntityByName( NULL, inputdata.value.StringID() );
+	CBaseEntity *pTarget = gEntList.FindEntityByName(nullptr, inputdata.value.StringID() );
 	if ( pTarget )
 	{
 		Write_BeamOff( pTarget );
@@ -1868,7 +1803,7 @@ CAdvisorLevitate::simresult_e	CAdvisorLevitate::Simulate( IPhysicsMotionControll
 			Vector vel; AngularImpulse angvel;
 			pObject->GetVelocity(&vel,&angvel);
 			Vector pos;
-			pObject->GetPosition(&pos,NULL);
+			pObject->GetPosition(&pos, nullptr);
 			bool bMovingUp = vel.z > 0;
 
 			// if above top limit and moving up, move down. if below bottom limit and moving down, move up.
@@ -1909,7 +1844,7 @@ CAdvisorLevitate::simresult_e	CAdvisorLevitate::Simulate( IPhysicsMotionControll
 	}
 	else // old stateless technique
 	{
-		Warning("Advisor using old-style object movement!\n");
+		Warning("Advisor using old-style object movement! (no levitation goal entities)\n");
 
 		/* // obsolete
 		CBaseEntity *pEnt = (CBaseEntity *)pObject->GetGameData();

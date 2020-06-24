@@ -564,8 +564,6 @@ void CNPC_Advisor::TemporallyStopLevitatingObjects(float length)
 	unlevitate_start_time = gpGlobals->curtime;
 	unlevitate_stop_time = unlevitate_start_time + length;
 
-	DevMsg(1,"TemporallyStopLevitatingObjects for %f seconds\n",length);
-
 	SetNextThink(unlevitate_start_time,"TempUnlevitate");
 }
 
@@ -578,7 +576,7 @@ void CNPC_Advisor::TempUnlevitateThink()
 		return;
 	}
 	
-	float levitate_strength = 1-SmoothCurve_Tweak(RemapVal(gpGlobals->curtime,unlevitate_start_time,unlevitate_stop_time,0,1),0);
+	float levitate_strength = SmoothCurve_Tweak(RemapVal(gpGlobals->curtime,unlevitate_start_time,unlevitate_stop_time,0,1),1);
 	m_levitateCallback.strength = levitate_strength;
 
 	SetNextThink(GetLastThink("TempUnlevitate") + 1.0f, "TempUnlevitate");
@@ -597,7 +595,7 @@ bool CNPC_Advisor::CanLevitateEntity( CBaseEntity *pEntity, int minMass, int max
 
 	float mass = pPhys->GetMass();
 
-	return ( //mass >= minMass && 
+	return ( mass >= minMass && 
 			 mass <= maxMass && 
 			 //pEntity->VPhysicsGetObject()->IsAsleep() && 
 			 pPhys->IsMoveable() /* &&
@@ -1454,9 +1452,7 @@ void CNPC_Advisor::PullObjectToStaging( CBaseEntity *pEnt, const Vector &staging
 #endif
 
 int	CNPC_Advisor::OnTakeDamage( const CTakeDamageInfo &info )
-{
-	DevLog(1, "Advisor takes damage of %f\n",info.GetDamage());
-	
+{	
 	// Clip our max 
 	CTakeDamageInfo newInfo = info;
 
@@ -1742,6 +1738,8 @@ void CNPC_Advisor::InputWrenchImmediate( inputdata_t &inputdata )
 					pPhys->EnableMotion( true );
 				}
 
+				Write_BeamOn(pEnt);
+				
 				// first, kick it at me
 				Vector objectToMe;
 				pPhys->GetPosition(&objectToMe, nullptr);

@@ -1118,7 +1118,7 @@ void CBreakable::Die( void )
 	VPhysicsDestroyObject();
 	SetThink( &CBreakable::SUB_Remove );
 	SetNextThink( gpGlobals->curtime + 0.1f );
-	if ( m_iszSpawnObject != NULL_STRING )
+	if ( m_iszSpawnObject != NULL_STRING && strcmp(STRING(m_iszSpawnObject),"0") != 0)
 	{
 		CBaseEntity::Create( STRING(m_iszSpawnObject), vecSpot, pCollisionProp->GetCollisionAngles(), this );
 	}

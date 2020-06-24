@@ -2633,16 +2633,13 @@ void PhysCollisionScreenShake( gamevcollisionevent_t *pEvent, int index )
 void PhysCollisionWarpEffect( gamevcollisionevent_t *pEvent, surfacedata_t *phit )
 {
 	Vector vecPos; 
-	QAngle vecAngles;
+	Vector vecNormal;
 
 	pEvent->pInternalData->GetContactPoint( vecPos );
-	{
-		Vector vecNormal;
-		pEvent->pInternalData->GetSurfaceNormal(vecNormal);
-		VectorAngles( vecNormal, vecAngles );
-	}
-
-	DispatchParticleEffect( "warp_shield_impact", vecPos, vecAngles );
+	pEvent->pInternalData->GetSurfaceNormal(vecNormal);
+	
+	g_pEffects->EnergySplash(vecPos, -vecNormal,true);
+	//DispatchParticleEffect( "electrical_arc_01_cp1", vecPos, vecAngles );
 }
 #endif
 

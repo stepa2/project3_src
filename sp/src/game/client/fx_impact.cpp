@@ -242,7 +242,7 @@ static ImpactEffect_t s_pImpactEffect[26] =
 	{ "impact_wood",		"impact_wood_noflecks" },		// CHAR_TEX_WOOD			
 	{ NULL,					NULL },							// CHAR_TEX_UNUSED		
 	{ "impact_glass",		NULL },							// CHAR_TEX_GLASS			
-	{ "warp_shield_impact", NULL },							// CHAR_TEX_WARPSHIELD		
+	{ NULL, NULL },							// CHAR_TEX_WARPSHIELD		
 };
 
 static void SetImpactControlPoint( CNewParticleEffect *pEffect, int nPoint, const Vector &vecImpactPoint, const Vector &vecForward, C_BaseEntity *pEntity )
@@ -300,6 +300,7 @@ static void PerformNewCustomEffects( const Vector &vecOrigin, trace_t &tr, const
 	}
 }
 
+
 void PerformCustomEffects( const Vector &vecOrigin, trace_t &tr, const Vector &shotDir, int iMaterial, int iScale, int nFlags )
 {
 	// Throw out the effect if any of these are true
@@ -355,9 +356,9 @@ void PerformCustomEffects( const Vector &vecOrigin, trace_t &tr, const Vector &s
 	}
 	else if ( iMaterial == CHAR_TEX_WARPSHIELD )
 	{
-		QAngle vecAngles;
-		VectorAngles( -shotDir, vecAngles );
-		DispatchParticleEffect( "warp_shield_impact", vecOrigin, vecAngles );
+
+		g_pEffects->EnergySplash(vecOrigin, -shotDir,true);
+		//DispatchParticleEffect( "electrical_arc_01_cp1", vecOrigin, vecAngles );
 	}
 }
 

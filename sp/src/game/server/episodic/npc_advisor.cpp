@@ -55,6 +55,8 @@ ConVar advisor_throw_stage_distance("advisor_throw_stage_distance","180.0",FCVAR
 ConVar advisor_throw_clearout_vel("advisor_throw_clearout_vel","200",FCVAR_NONE,"TEMP: velocity with which advisor clears things out of a throwable's way");
 // ConVar advisor_staging_duration("
 
+ConVar advisor_unlevitate_time( "advisor_unlevitate_time", "3" );
+
 // how long it will take an object to get hauled to the staging point
 #define STAGING_OBJECT_FALLOFF_TIME 0.15f
 #endif
@@ -78,7 +80,8 @@ enum
 {
 	SCHED_ADVISOR_COMBAT = LAST_SHARED_SCHEDULE,
 	SCHED_ADVISOR_IDLE_STAND,
-	SCHED_ADVISOR_TOSS_PLAYER
+	SCHED_ADVISOR_TOSS_PLAYER,
+	SCHED_ADVISOR_LOSE_GRIP
 };
 
 
@@ -91,6 +94,7 @@ enum
 	TASK_ADVISOR_LEVITATE_OBJECTS,
 	TASK_ADVISOR_STAGE_OBJECTS,
 	TASK_ADVISOR_BARRAGE_OBJECTS,
+	TASK_ADVISOR_UNLEVITATE_OBJECTS,
 
 	TASK_ADVISOR_PIN_PLAYER,
 };
@@ -121,7 +125,7 @@ public:
 		return !(m_vecGoalPos1.IsValid() && m_vecGoalPos2.IsValid());
 	}
 
-	virtual simresult_e	Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular );
+	simresult_e	Simulate( IPhysicsMotionController *pController, IPhysicsObject *pObject, float deltaTime, Vector &linear, AngularImpulse &angular ) override;
 
 	EHANDLE m_Advisor; ///< handle to the advisor.
 
@@ -129,6 +133,8 @@ public:
 	Vector m_vecGoalPos2;
 
 	float m_flFloat;
+
+	float strength;
 };
 
 BEGIN_SIMPLE_DATADESC( CAdvisorLevitate )
@@ -156,37 +162,40 @@ public:
 	//
 	// CBaseEntity:
 	//
-	virtual void Activate();
-	virtual void Spawn();
-	virtual void Precache();
-	virtual void OnRestore();
-	virtual void UpdateOnRemove();
+	void Activate() override;
+	void Spawn() override;
+	void Precache() override;
+	void OnRestore() override;
+	void UpdateOnRemove() override;
 
-	virtual int DrawDebugTextOverlays();
+	int DrawDebugTextOverlays() override;
 
 	//
 	// CAI_BaseNPC:
 	//
-	virtual float MaxYawSpeed() { return 120.0f; }
-	
-	virtual Class_T Classify();
+	float MaxYawSpeed() override { return 120.0f; }
+
+	Class_T Classify() override;
 
 #if NPC_ADVISOR_HAS_BEHAVIOR
-	virtual int GetSoundInterests();
-	virtual int SelectSchedule();
-	virtual void StartTask( const Task_t *pTask );
-	virtual void RunTask( const Task_t *pTask );
-	virtual void OnScheduleChange( void );
+	int GetSoundInterests() override;
+	int SelectSchedule() override;
+	void StartTask( const Task_t *pTask ) override;
+	void RunTask( const Task_t *pTask ) override;
+	void OnScheduleChange( void ) override;
+	int TranslateSchedule( int scheduleType ) override;
 #endif
 
-	virtual void PainSound( const CTakeDamageInfo &info );
-	virtual void DeathSound( const CTakeDamageInfo &info );
-	virtual void IdleSound();
-	virtual void AlertSound();
+	void PainSound( const CTakeDamageInfo &info ) override;
+	void DeathSound( const CTakeDamageInfo &info ) override;
+	void IdleSound() override;
+	void AlertSound() override;
 
+	void TempUnlevitateThink();
+	
 #if NPC_ADVISOR_HAS_BEHAVIOR
-	virtual bool QueryHearSound( CSound *pSound );
-	virtual void GatherConditions( void );
+	bool QueryHearSound( CSound *pSound ) override;
+	void GatherConditions( void ) override;
 
 	/// true iff I recently threw the given object (not so fast)
 	bool DidThrow(const CBaseEntity *pEnt);
@@ -194,10 +203,10 @@ public:
 	inline bool DidThrow(const CBaseEntity *pEnt) { return false; }
 #endif
 
-	virtual bool IsHeavyDamage( const CTakeDamageInfo &info );
-	virtual int	 OnTakeDamage( const CTakeDamageInfo &info );
+	bool IsHeavyDamage( const CTakeDamageInfo &info ) override;
+	int	 OnTakeDamage( const CTakeDamageInfo &info ) override;
 
-	virtual const impactdamagetable_t &GetPhysicsImpactDamageTable( void );
+	const impactdamagetable_t &GetPhysicsImpactDamageTable( void ) override;
 	COutputInt   m_OnHealthIsNow;
 
 #if NPC_ADVISOR_HAS_BEHAVIOR
@@ -217,7 +226,6 @@ public:
 
 	enum { kMaxThrownObjectsTracked = 4 };
 #endif
-
 	DECLARE_DATADESC();
 
 protected:
@@ -228,6 +236,7 @@ protected:
 
 	bool CanLevitateEntity( CBaseEntity *pEntity, int minMass, int maxMass );
 	void StartLevitatingObjects( void );
+	void TemporallyStopLevitatingObjects(float length);
 
 
 #if NPC_ADVISOR_HAS_BEHAVIOR
@@ -284,8 +293,12 @@ protected:
 	float m_flStagingEnd; 
 	float m_flThrowPhysicsTime;
 	float m_flLastThrowTime;
-	float m_flLastPlayerAttackTime; ///< last time the player attacked something. 
+	float m_flLastPlayerAttackTime; ///< last time the player attacked something.
 
+	float healthdrop;
+	float unlevitate_start_time;
+	float unlevitate_stop_time;
+	
 	int   m_iStagingNum; ///< number of objects advisor stages at once
 	bool  m_bWasScripting;
 
@@ -347,6 +360,8 @@ BEGIN_DATADESC( CNPC_Advisor )
 	DEFINE_INPUTFUNC( FIELD_STRING,  "BeamOff",         InputTurnBeamOff ),
 	DEFINE_INPUTFUNC( FIELD_STRING,  "ElightOn",         InputElightOn ),
 	DEFINE_INPUTFUNC( FIELD_STRING,  "ElightOff",         InputElightOff ),
+
+	DEFINE_THINKFUNC(TempUnlevitateThink),
 #endif
 
 END_DATADESC()
@@ -396,9 +411,12 @@ void CNPC_Advisor::Spawn()
 
 	NPCInit();
 
-	SetGoalEnt(nullptr );
+	SetGoalEnt(nullptr);
 
 	AddEFlags( EFL_NO_DISSOLVE );
+
+	RegisterThinkContext( "TempUnlevitate" );
+	SetContextThink( &CNPC_Advisor::TempUnlevitateThink, TICK_NEVER_THINK, "TempUnlevitate" );
 }
 
 
@@ -445,6 +463,7 @@ void CNPC_Advisor::Activate()
 	m_hLevitationArea = gEntList.FindEntityGeneric(nullptr, STRING( m_iszLevitationArea ), this );
 
 	m_levitateCallback.m_Advisor = this;
+	m_levitateCallback.strength = 1;
 
 #if NPC_ADVISOR_HAS_BEHAVIOR
 	// load the staging positions
@@ -539,6 +558,32 @@ void CNPC_Advisor::StartLevitatingObjects()
 		}
 	}
 }
+
+void CNPC_Advisor::TemporallyStopLevitatingObjects(float length)
+{
+	unlevitate_start_time = gpGlobals->curtime;
+	unlevitate_stop_time = unlevitate_start_time + length;
+
+	DevMsg(1,"TemporallyStopLevitatingObjects for %f seconds\n",length);
+
+	SetNextThink(unlevitate_start_time,"TempUnlevitate");
+}
+
+void CNPC_Advisor::TempUnlevitateThink()
+{
+	if (gpGlobals->curtime > unlevitate_stop_time)
+	{
+		SetNextThink(TICK_NEVER_THINK,"TempUnlevitate");
+		m_levitateCallback.strength = 1;
+		return;
+	}
+	
+	float levitate_strength = 1-SmoothCurve_Tweak(RemapVal(gpGlobals->curtime,unlevitate_start_time,unlevitate_stop_time,0,1),0);
+	m_levitateCallback.strength = levitate_strength;
+
+	SetNextThink(GetLastThink("TempUnlevitate") + 1.0f, "TempUnlevitate");
+}
+
 
 // This function is used by both version of the entity finder below 
 bool CNPC_Advisor::CanLevitateEntity( CBaseEntity *pEntity, int minMass, int maxMass )
@@ -726,6 +771,13 @@ void CNPC_Advisor::StartTask( const Task_t *pTask )
 			Assert( m_hPlayerPinPos.IsValid() );
 			m_playerPinFailsafeTime = gpGlobals->curtime + 10.0f;
 
+			break;
+		}
+
+		case TASK_ADVISOR_UNLEVITATE_OBJECTS:
+		{
+			
+			TemporallyStopLevitatingObjects(sqrt(sqrt(healthdrop)));
 			break;
 		}
 
@@ -993,6 +1045,13 @@ void CNPC_Advisor::RunTask( const Task_t *pTask )
 
 			break;
 			
+		}
+
+		case TASK_ADVISOR_UNLEVITATE_OBJECTS:
+		{
+			if (gpGlobals->curtime > unlevitate_stop_time) 
+				TaskComplete();
+			break;
 		}
 
 		default:
@@ -1396,8 +1455,16 @@ void CNPC_Advisor::PullObjectToStaging( CBaseEntity *pEnt, const Vector &staging
 
 int	CNPC_Advisor::OnTakeDamage( const CTakeDamageInfo &info )
 {
+	DevLog(1, "Advisor takes damage of %f\n",info.GetDamage());
+	
 	// Clip our max 
 	CTakeDamageInfo newInfo = info;
+
+	if (info.GetDamage() > 5)
+	{
+		healthdrop = info.GetDamage();	
+	}
+	
 	if ( newInfo.GetDamage() > 20.0f )
 	{
 		newInfo.SetDamage( 20.0f );
@@ -1458,6 +1525,15 @@ int CNPC_Advisor::SelectSchedule()
 	return BaseClass::SelectSchedule();
 }
 
+int CNPC_Advisor::TranslateSchedule( int scheduleType )
+{
+	if (HasInterruptCondition(COND_HEAVY_DAMAGE) && healthdrop != 0)
+	{
+		return SCHED_ADVISOR_LOSE_GRIP;
+	}
+	
+	return BaseClass::TranslateSchedule(scheduleType);
+}
 
 //-----------------------------------------------------------------------------
 // return the position where an object should be staged before throwing
@@ -1835,6 +1911,9 @@ CAdvisorLevitate::simresult_e	CAdvisorLevitate::Simulate( IPhysicsMotionControll
 					angular = Vector( 0, 0, 10 );
 				}
 			}
+
+			linear*=strength;
+			angular*=strength;
 			
 			return SIM_GLOBAL_ACCELERATION;
 		}
@@ -1938,6 +2017,8 @@ AI_BEGIN_CUSTOM_NPC( npc_advisor, CNPC_Advisor )
 	DECLARE_TASK( TASK_ADVISOR_BARRAGE_OBJECTS ) // hurl all the objects in sequence
 
 	DECLARE_TASK( TASK_ADVISOR_PIN_PLAYER ) // pinion the player to a point in space
+
+	DECLARE_TASK( TASK_ADVISOR_UNLEVITATE_OBJECTS )
 	
 	//=========================================================
 	DEFINE_SCHEDULE
@@ -1953,12 +2034,13 @@ AI_BEGIN_CUSTOM_NPC( npc_advisor, CNPC_Advisor )
 		"	Interrupts"
 		"		COND_ADVISOR_PHASE_INTERRUPT"
 		"		COND_ENEMY_DEAD"
+		"		COND_HEAVY_DAMAGE"	
 	)
 
 	//=========================================================
 	DEFINE_SCHEDULE
 	(
-	SCHED_ADVISOR_IDLE_STAND,
+		SCHED_ADVISOR_IDLE_STAND,
 
 		"	Tasks"
 		"		TASK_SET_ACTIVITY		ACTIVITY:ACT_IDLE"
@@ -1980,6 +2062,14 @@ AI_BEGIN_CUSTOM_NPC( npc_advisor, CNPC_Advisor )
 		"		TASK_ADVISOR_PIN_PLAYER				0"
 		"	"
 		"	Interrupts"
+	)
+
+	DEFINE_SCHEDULE
+	(
+		SCHED_ADVISOR_LOSE_GRIP,
+
+		"	Tasks"
+		"		TASK_ADVISOR_UNLEVITATE_OBJECTS		0"	
 	)
 
 AI_END_CUSTOM_NPC()

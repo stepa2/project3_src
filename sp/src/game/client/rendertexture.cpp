@@ -64,6 +64,7 @@ ITexture *GetFullscreenTexture( void )
 	return s_pFullscreenTexture;
 }
 
+#ifndef MAPBASE
 //=============================================================================
 // Camera Texture
 //=============================================================================
@@ -79,6 +80,7 @@ ITexture *GetCameraTexture( void )
 	
 	return s_pCameraTexture;
 }
+#endif
 
 //=============================================================================
 // Full Frame Depth Texture
@@ -246,7 +248,9 @@ ITexture *GetTeenyTexture( int which )
 void ReleaseRenderTargets( void )
 {
 	s_pPowerOfTwoFrameBufferTexture.Shutdown();
+#ifndef MAPBASE
 	s_pCameraTexture.Shutdown();
+#endif
 	s_pWaterReflectionTexture.Shutdown();
 	s_pWaterRefractionTexture.Shutdown();
 	s_pQuarterSizedFB0.Shutdown();

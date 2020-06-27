@@ -14,7 +14,9 @@ ITexture *GetFullFrameFrameBufferTexture( int textureIndex );
 ITexture *GetWaterReflectionTexture( void );
 ITexture *GetWaterRefractionTexture( void );
 ITexture *GetFullscreenTexture( void );
+#ifndef MAPBASE
 ITexture *GetCameraTexture( void );
+#endif
 ITexture *GetFullFrameDepthTexture( void );
 
 // SmallBufferHDRx=r16g16b16a16 quarter-sized texture

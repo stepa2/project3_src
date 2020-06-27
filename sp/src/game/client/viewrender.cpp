@@ -367,39 +367,7 @@ private:
 
 CWorldListCache g_WorldListCache;
 
-//-----------------------------------------------------------------------------
-// Standard 3d skybox view
-//-----------------------------------------------------------------------------
-class CSkyboxView : public CRendering3dView
-{
-	DECLARE_CLASS( CSkyboxView, CRendering3dView );
-public:
-	CSkyboxView(CViewRender *pMainView) : 
-		CRendering3dView( pMainView ),
-		m_pSky3dParams( NULL )
-	  {
-	  }
 
-	bool			Setup( const CViewSetup &view, int *pClearFlags, SkyboxVisibility_t *pSkyboxVisible );
-	void			Draw();
-
-protected:
-
-#ifdef PORTAL
-	virtual bool ShouldDrawPortals() { return false; }
-#endif
-
-	virtual SkyboxVisibility_t	ComputeSkyboxVisibility();
-
-	bool			GetSkyboxFogEnable();
-
-	void			Enable3dSkyboxFog( void );
-	void			DrawInternal( view_id_t iSkyBoxViewID, bool bInvokePreAndPostRender, ITexture *pRenderTarget, ITexture *pDepthTarget );
-
-	sky3dparams_t *	PreRender3dSkyboxWorld( SkyboxVisibility_t nSkyboxVisible );
-
-	sky3dparams_t *m_pSky3dParams;
-};
 
 //-----------------------------------------------------------------------------
 // 3d skybox view when drawing portals
@@ -3317,6 +3285,7 @@ bool CViewRender::DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_Poin
 	return true;
 }
 
+
 void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 {
 #ifdef PORTAL
@@ -3338,19 +3307,20 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 
 	// FIXME: this should check for the ability to do a render target maybe instead.
 	// FIXME: shouldn't have to truck through all of the visible entities for this!!!!
-	ITexture *pCameraTarget = GetCameraTexture();
-	int width = pCameraTarget->GetActualWidth();
-	int height = pCameraTarget->GetActualHeight();
+	//ITexture *pCameraTarget = GetCameraTexture();
+	//int width = pCameraTarget->GetActualWidth();
+	//int height = pCameraTarget->GetActualHeight();
 
 	C_BasePlayer *player = C_BasePlayer::GetLocalPlayer();
 	
-	int cameraNum;
-	for ( cameraNum = 0; pCameraEnt != NULL; pCameraEnt = pCameraEnt->m_pNext )
+	int cameraNum = 0;
+	for (; pCameraEnt != nullptr; pCameraEnt = pCameraEnt->m_pNext )
 	{
 		if ( !pCameraEnt->IsActive() || pCameraEnt->IsDormant() )
 			continue;
 
-		if ( !DrawOneMonitor( pCameraTarget, cameraNum, pCameraEnt, cameraView, player, 0, 0, width, height ) )
+		if (!DrawCamera(pCameraEnt, cameraNum, cameraView, player))
+//		if ( !DrawOneMonitor( pCameraTarget, cameraNum, pCameraEnt, cameraView, player, 0, 0, width, height ) )
 			continue;
 
 		++cameraNum;
@@ -3358,12 +3328,13 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 
 	if ( IsX360() && cameraNum > 0 )
 	{
+		AssertMsg(0,"Unimplemented!");
 		// resolve render target to system memory texture
 		// resolving *after* all monitors drawn to ensure a single blit using fastest resolve path
-		CMatRenderContextPtr pRenderContext( materials );
+		/*CMatRenderContextPtr pRenderContext( materials );
 		pRenderContext->PushRenderTargetAndViewport( pCameraTarget );
 		pRenderContext->CopyRenderTargetToTextureEx( pCameraTarget, 0, NULL, NULL );
-		pRenderContext->PopRenderTargetAndViewport();
+		pRenderContext->PopRenderTargetAndViewport();*/
 	}
 
 #ifdef _DEBUG

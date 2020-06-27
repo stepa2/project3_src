@@ -48,7 +48,8 @@ private:
 	float m_DegreesPerSecond;
 
 	CNetworkVar( float, m_FOV );
-	CNetworkVar( float, m_Resolution );
+	CNetworkVar( float, m_ResolutionHeight );
+	CNetworkVar( float, m_ResolutionWidth );
 	CNetworkVar( bool, m_bFogEnable );
 	CNetworkColor32( m_FogColor );
 	CNetworkVar( float, m_flFogStart );
@@ -58,6 +59,8 @@ private:
 	CNetworkVar( bool, m_bUseScreenAspectRatio );
 #ifdef MAPBASE
 	CNetworkVar( int, m_iSkyMode );
+	CNetworkVar(bool, m_KeepRTTexture)
+	
 #endif
 
 	// Allows the mapmaker to control whether a camera is active or not

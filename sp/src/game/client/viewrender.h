@@ -270,6 +270,40 @@ protected:
 	ViewCustomVisibility_t *m_pCustomVisibility;
 };
 
+//-----------------------------------------------------------------------------
+// Standard 3d skybox view
+//-----------------------------------------------------------------------------
+class CSkyboxView : public CRendering3dView
+{
+	DECLARE_CLASS( CSkyboxView, CRendering3dView );
+public:
+	CSkyboxView(CViewRender *pMainView) : 
+		CRendering3dView( pMainView ),
+		m_pSky3dParams( NULL )
+	  {
+	  }
+
+	bool			Setup( const CViewSetup &view, int *pClearFlags, SkyboxVisibility_t *pSkyboxVisible );
+	void			Draw();
+
+protected:
+
+#ifdef PORTAL
+	virtual bool ShouldDrawPortals() { return false; }
+#endif
+
+	virtual SkyboxVisibility_t	ComputeSkyboxVisibility();
+
+	bool			GetSkyboxFogEnable();
+
+	void			Enable3dSkyboxFog( void );
+	void			DrawInternal( view_id_t iSkyBoxViewID, bool bInvokePreAndPostRender, ITexture *pRenderTarget, ITexture *pDepthTarget );
+
+	sky3dparams_t *	PreRender3dSkyboxWorld( SkyboxVisibility_t nSkyboxVisible );
+
+	sky3dparams_t *m_pSky3dParams;
+};
+
 
 //-----------------------------------------------------------------------------
 // 
@@ -437,6 +471,7 @@ public:
 private:
 	int				m_BuildWorldListsNumber;
 
+	friend bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetup, CViewRender* viewRender, C_BasePlayer* player);
 
 	// General draw methods
 	// baseDrawFlags is a combination of DF_ defines. DF_MONITOR is passed into here while drawing a monitor.

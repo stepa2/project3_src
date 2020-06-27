@@ -14,8 +14,14 @@
 #include "c_baseentity.h"
 #include "basetypes.h"
 
+class CViewRender;
+class C_PointCamera;
+
+bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetup, CViewRender* viewRender, C_BasePlayer* player);
+
 class C_PointCamera : public C_BaseEntity
 {
+	friend bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetup, CViewRender* viewRender, C_BasePlayer* player);
 public:
 	DECLARE_CLASS( C_PointCamera, C_BaseEntity );
 	DECLARE_CLIENTCLASS();
@@ -30,7 +36,7 @@ public:
 	virtual bool	ShouldDraw();
 
 	float			GetFOV();
-	float			GetResolution();
+	Vector2D		GetResolution() const;
 	bool			IsFogEnabled();
 	void			GetFogColor( unsigned char &r, unsigned char &g, unsigned char &b );
 	float			GetFogStart();
@@ -46,9 +52,12 @@ public:
 
 	virtual void	GetToolRecordingState( KeyValues *msg );
 
+	bool KeepRTTexture() const;
+
 private:
 	float m_FOV;
-	float m_Resolution;
+	float m_ResolutionHeight;
+	float m_ResolutionWidth;
 	bool m_bFogEnable;
 	color32 m_FogColor;
 	float m_flFogStart;
@@ -57,7 +66,9 @@ private:
 	bool m_bActive;
 	bool m_bUseScreenAspectRatio;
 #ifdef MAPBASE
+	bool m_KeepRTTexture;
 	SkyboxVisibility_t m_iSkyMode;
+	CTextureReference m_RenderTargetTexture;
 #endif
 
 public:
@@ -86,5 +97,6 @@ private:
 #endif
 
 C_PointCamera *GetPointCameraList();
+
 
 #endif // C_POINTCAMERA_H

@@ -16,6 +16,9 @@
 
 // Spawnflags
 #define SF_CAMERA_START_OFF				0x01
+#ifdef MAPBASE
+#define SF_CAMERA_KEEP_RT_TEXTURE		0x02
+#endif
 
 // UNDONE: Share properly with the client code!!!
 #define POINT_CAMERA_MSG_SETACTIVE		1
@@ -66,14 +69,10 @@ void CPointCamera::Spawn( void )
 {
 	BaseClass::Spawn();
 
-	if ( m_spawnflags & SF_CAMERA_START_OFF )
-	{
-		m_bIsOn = false;
-	}
-	else
-	{
-		m_bIsOn = true;
-	}
+	m_bIsOn = ( m_spawnflags & SF_CAMERA_START_OFF ) == 0;
+#ifdef MAPBASE
+	m_KeepRTTexture = ( m_spawnflags & SF_CAMERA_KEEP_RT_TEXTURE ) != 0;
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -82,14 +81,8 @@ void CPointCamera::Spawn( void )
 //-----------------------------------------------------------------------------
 int CPointCamera::UpdateTransmitState()
 {
-	if ( m_bActive )
-	{
-		return SetTransmitState( FL_EDICT_ALWAYS );
-	}
-	else
-	{
-		return SetTransmitState( FL_EDICT_DONTSEND );
-	}
+	if (m_bActive) return SetTransmitState(FL_EDICT_ALWAYS);
+	else return SetTransmitState(FL_EDICT_DONTSEND);
 }
 
 
@@ -220,7 +213,8 @@ BEGIN_DATADESC( CPointCamera )
 
 	// Save/restore Keyvalue fields
 	DEFINE_KEYFIELD( m_FOV,			FIELD_FLOAT, "FOV" ),
-	DEFINE_KEYFIELD( m_Resolution,	FIELD_FLOAT, "resolution" ),
+	DEFINE_KEYFIELD( m_ResolutionHeight,	FIELD_FLOAT, "resolution_height" ),
+	DEFINE_KEYFIELD( m_ResolutionWidth,	FIELD_FLOAT, "resolution_width" ),
 	DEFINE_KEYFIELD( m_bFogEnable,	FIELD_BOOLEAN, "fogEnable" ),
 	DEFINE_KEYFIELD( m_FogColor,	FIELD_COLOR32,	"fogColor" ),
 	DEFINE_KEYFIELD( m_flFogStart,	FIELD_FLOAT, "fogStart" ),
@@ -229,9 +223,11 @@ BEGIN_DATADESC( CPointCamera )
 	DEFINE_KEYFIELD( m_bUseScreenAspectRatio, FIELD_BOOLEAN, "UseScreenAspectRatio" ),
 #ifdef MAPBASE
 	DEFINE_KEYFIELD( m_iSkyMode, FIELD_INTEGER, "SkyMode" ),
+	DEFINE_FIELD( m_KeepRTTexture, FIELD_BOOLEAN),
 #endif
 	DEFINE_FIELD( m_bActive,		FIELD_BOOLEAN ),
 	DEFINE_FIELD( m_bIsOn,			FIELD_BOOLEAN ),
+
 
 	DEFINE_FIELD( m_TargetFOV,		FIELD_FLOAT ),
 	DEFINE_FIELD( m_DegreesPerSecond, FIELD_FLOAT ),
@@ -253,8 +249,9 @@ END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST( CPointCamera, DT_PointCamera )
 	SendPropFloat( SENDINFO( m_FOV ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_Resolution ), 0, SPROP_NOSCALE ),
-	SendPropInt( SENDINFO( m_bFogEnable ), 1, SPROP_UNSIGNED ),	
+	SendPropFloat( SENDINFO( m_ResolutionHeight ), 0, SPROP_NOSCALE ),
+	SendPropFloat( SENDINFO( m_ResolutionWidth ), 0, SPROP_NOSCALE ),
+	SendPropInt( SENDINFO( m_bFogEnable ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO_STRUCTELEM( m_FogColor ), 32, SPROP_UNSIGNED ),
 	SendPropFloat( SENDINFO( m_flFogStart ), 0, SPROP_NOSCALE ),	
 	SendPropFloat( SENDINFO( m_flFogEnd ), 0, SPROP_NOSCALE ),	
@@ -263,6 +260,7 @@ IMPLEMENT_SERVERCLASS_ST( CPointCamera, DT_PointCamera )
 	SendPropInt( SENDINFO( m_bUseScreenAspectRatio ), 1, SPROP_UNSIGNED ),
 #ifdef MAPBASE
 	SendPropInt( SENDINFO( m_iSkyMode ) ),
+	SendPropInt( SENDINFO( m_KeepRTTexture ), 1, SPROP_UNSIGNED ),
 #endif
 END_SEND_TABLE()
 

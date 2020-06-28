@@ -30,6 +30,11 @@ $Project "Client (HL2)"
 
 		$Folder	"HL2 DLL"
 		{
+			$Folder "Material Proxies"
+			{
+				$File	"hl2\shieldproxy.cpp"
+			}
+
 			$File	"$SRCDIR\game\shared\hl2\basehlcombatweapon_shared.cpp"
 			$File	"$SRCDIR\game\shared\hl2\achievements_hl2.cpp"
 			$File	"hl2\c_antlion_dust.cpp"
@@ -109,7 +114,6 @@ $Project "Client (HL2)"
 			$File	"hl2\hud_suitpower.h"
 			$File	"hl2\hud_weaponselection.cpp"
 			$File	"hl2\hud_zoom.cpp"
-			$File	"hl2\shieldproxy.cpp"
 			$File	"hl2\vgui_rootpanel_hl2.cpp"
 			$File 	"episodic\c_vort_charge_token.cpp"
 		}

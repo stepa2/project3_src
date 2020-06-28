@@ -24,8 +24,8 @@
 
 IMPLEMENT_CLIENTCLASS_DT( C_PointCamera, DT_PointCamera, CPointCamera )
 	RecvPropFloat( RECVINFO( m_FOV ) ), 
-	RecvPropFloat( RECVINFO( m_ResolutionHeight ) ),
-	RecvPropFloat( RECVINFO(m_ResolutionWidth) ),
+	RecvPropInt( RECVINFO( m_ResolutionHeight ) ),
+	RecvPropInt( RECVINFO(m_ResolutionWidth) ),
 	RecvPropInt( RECVINFO( m_bFogEnable ) ),
 	RecvPropInt( RECVINFO( m_FogColor ) ),
 	RecvPropFloat( RECVINFO( m_flFogStart ) ), 
@@ -49,18 +49,29 @@ C_PointCamera* GetPointCameraList()
 
 
 
-
 C_PointCamera::C_PointCamera()
 {
-	m_bActive = false;
+	m_bActive = m_bPrevActive = false;
 	m_bFogEnable = false;
 
 	g_PointCameraList.Insert( this );
+
+	if(KeepRTTexture())
+		CreateRTTexture();
 }
+
+
+void C_PointCamera::Spawn()
+{
+	SetNextClientThink(
+		KeepRTTexture() ? CLIENT_THINK_NEVER : gpGlobals->curtime );
+}
+
 
 C_PointCamera::~C_PointCamera()
 {
 	g_PointCameraList.Remove( this );
+	ReleaseRTTexture();
 }
 
 bool C_PointCamera::ShouldDraw()
@@ -73,10 +84,6 @@ float C_PointCamera::GetFOV()
 	return m_FOV;
 }
 
-Vector2D C_PointCamera::GetResolution() const
-{
-	return Vector2D(m_ResolutionHeight,m_ResolutionWidth);
-}
 
 bool C_PointCamera::IsFogEnabled()
 {
@@ -100,6 +107,13 @@ float C_PointCamera::GetFogEnd()
 	return m_flFogEnd;
 }
 
+void C_PointCamera::ClientThink()
+{
+	if (m_bPrevActive != m_bActive)
+		m_bActive ? CreateRTTexture() : ReleaseRTTexture();
+	m_bPrevActive = m_bActive;
+}
+
 float C_PointCamera::GetFogMaxDensity()
 {
 	return m_flFogMaxDensity;
@@ -115,6 +129,21 @@ bool C_PointCamera::KeepRTTexture() const
 	return m_KeepRTTexture;
 }
 
+void C_PointCamera::CreateRTTexture()
+{
+	m_RenderTargetTexture.InitRenderTarget(
+		m_ResolutionWidth, m_ResolutionHeight,
+		RT_SIZE_DEFAULT,
+		materials->GetBackBufferFormat(), 
+		MATERIAL_RT_DEPTH_SHARED,
+		true);
+}
+
+void C_PointCamera::ReleaseRTTexture()
+{
+	if(m_RenderTargetTexture.IsValid())
+		m_RenderTargetTexture.Shutdown();
+}
 
 
 void C_PointCamera::GetToolRecordingState( KeyValues *msg )
@@ -149,7 +178,7 @@ bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetu
 
 #ifdef MAPBASE
 	ITexture* renderTarget = camera->m_RenderTargetTexture;
-	if(renderTarget == nullptr) return false;
+	if(IsErrorTexture(renderTarget)) return false;
 #else
 	ITexture* renderTarget = GetCameraTexture();
 #endif

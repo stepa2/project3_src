@@ -169,15 +169,15 @@ void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *
 		if ( !pTargetEnt->NetworkProp()->IsInPVS( pPlayer->edict(), pvs, pvssize ) )
 			continue;
 
-		if ( engine->CheckAreasConnected( area, pTargetEnt->NetworkProp()->AreaNum() ) )
-		{
-			CPointCamera *pCameraEnt = g_InfoCameraLinkList[i]->m_hCamera;
-			if ( pCameraEnt )
-			{
-				engine->AddOriginToPVS( pCameraEnt->GetAbsOrigin() );
-				pCameraEnt->SetActive( true );
-			}
-		}
+		if ( !engine->CheckAreasConnected( area, pTargetEnt->NetworkProp()->AreaNum() ) )
+			continue;
+		
+		CPointCamera *pCameraEnt = g_InfoCameraLinkList[i]->m_hCamera;
+		if ( !pCameraEnt )
+			continue;
+
+		engine->AddOriginToPVS( pCameraEnt->GetAbsOrigin() );
+		pCameraEnt->SetActive( true );
 	}
 }
 

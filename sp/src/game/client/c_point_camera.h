@@ -36,13 +36,14 @@ public:
 	virtual bool	ShouldDraw();
 
 	float			GetFOV();
-	Vector2D		GetResolution() const;
 	bool			IsFogEnabled();
 	void			GetFogColor( unsigned char &r, unsigned char &g, unsigned char &b );
 	float			GetFogStart();
 	float			GetFogMaxDensity();
 	float			GetFogEnd();
 	bool			UseScreenAspectRatio() const { return m_bUseScreenAspectRatio; }
+	void			ClientThink() override;
+	void			Spawn() override;
 #ifdef MAPBASE
 	virtual bool	IsOrtho() const { return false; }
 	virtual void	GetOrthoDimensions(float &up, float &dn, float &lf, float &rt) const {}
@@ -55,15 +56,20 @@ public:
 	bool KeepRTTexture() const;
 
 private:
+	void CreateRTTexture();
+	void ReleaseRTTexture();
+
+private:
 	float m_FOV;
-	float m_ResolutionHeight;
-	float m_ResolutionWidth;
+	int m_ResolutionHeight;
+	int m_ResolutionWidth;
 	bool m_bFogEnable;
 	color32 m_FogColor;
 	float m_flFogStart;
 	float m_flFogEnd;
 	float m_flFogMaxDensity;
 	bool m_bActive;
+	bool m_bPrevActive;
 	bool m_bUseScreenAspectRatio;
 #ifdef MAPBASE
 	bool m_KeepRTTexture;

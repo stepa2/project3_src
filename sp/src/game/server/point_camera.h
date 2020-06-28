@@ -48,8 +48,8 @@ private:
 	float m_DegreesPerSecond;
 
 	CNetworkVar( float, m_FOV );
-	CNetworkVar( float, m_ResolutionHeight );
-	CNetworkVar( float, m_ResolutionWidth );
+	CNetworkVar( int, m_ResolutionHeight );
+	CNetworkVar( int, m_ResolutionWidth );
 	CNetworkVar( bool, m_bFogEnable );
 	CNetworkColor32( m_FogColor );
 	CNetworkVar( float, m_flFogStart );

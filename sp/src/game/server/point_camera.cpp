@@ -81,8 +81,14 @@ void CPointCamera::Spawn( void )
 //-----------------------------------------------------------------------------
 int CPointCamera::UpdateTransmitState()
 {
-	if (m_bActive) return SetTransmitState(FL_EDICT_ALWAYS);
-	else return SetTransmitState(FL_EDICT_DONTSEND);
+	if ( m_bActive )
+	{
+		return SetTransmitState( FL_EDICT_ALWAYS );
+	}
+	else
+	{
+		return SetTransmitState( FL_EDICT_DONTSEND );
+	}
 }
 
 
@@ -206,15 +212,15 @@ void CPointCamera::InputSetOn( inputdata_t &inputdata )
 void CPointCamera::InputSetOff( inputdata_t &inputdata )
 {
 	m_bIsOn = false;
-	SetActive( false );
+		( false );
 }
 
 BEGIN_DATADESC( CPointCamera )
 
 	// Save/restore Keyvalue fields
 	DEFINE_KEYFIELD( m_FOV,			FIELD_FLOAT, "FOV" ),
-	DEFINE_KEYFIELD( m_ResolutionHeight,	FIELD_FLOAT, "resolution_height" ),
-	DEFINE_KEYFIELD( m_ResolutionWidth,	FIELD_FLOAT, "resolution_width" ),
+	DEFINE_KEYFIELD( m_ResolutionHeight,	FIELD_INTEGER, "resolution_height" ),
+	DEFINE_KEYFIELD( m_ResolutionWidth,	FIELD_INTEGER, "resolution_width" ),
 	DEFINE_KEYFIELD( m_bFogEnable,	FIELD_BOOLEAN, "fogEnable" ),
 	DEFINE_KEYFIELD( m_FogColor,	FIELD_COLOR32,	"fogColor" ),
 	DEFINE_KEYFIELD( m_flFogStart,	FIELD_FLOAT, "fogStart" ),
@@ -249,8 +255,8 @@ END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST( CPointCamera, DT_PointCamera )
 	SendPropFloat( SENDINFO( m_FOV ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_ResolutionHeight ), 0, SPROP_NOSCALE ),
-	SendPropFloat( SENDINFO( m_ResolutionWidth ), 0, SPROP_NOSCALE ),
+	SendPropInt( SENDINFO( m_ResolutionHeight ), 0, SPROP_NOSCALE ),
+	SendPropInt( SENDINFO( m_ResolutionWidth ), 0, SPROP_NOSCALE ),
 	SendPropInt( SENDINFO( m_bFogEnable ), 1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO_STRUCTELEM( m_FogColor ), 32, SPROP_UNSIGNED ),
 	SendPropFloat( SENDINFO( m_flFogStart ), 0, SPROP_NOSCALE ),	

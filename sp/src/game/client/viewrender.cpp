@@ -3155,136 +3155,136 @@ void CViewRender::ViewDrawScene_Intro( const CViewSetup &view, int nClearFlags, 
 	}
 }
 
-//-----------------------------------------------------------------------------
-// Purpose: Sets up scene and renders camera view
-// Input  : cameraNum - 
-//			&cameraView
-//			*localPlayer - 
-//			x - 
-//			y - 
-//			width - 
-//			height - 
-//			highend - 
-// Output : Returns true on success, false on failure.
-//-----------------------------------------------------------------------------
-bool CViewRender::DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_PointCamera *pCameraEnt, 
-	const CViewSetup &cameraView, C_BasePlayer *localPlayer, int x, int y, int width, int height )
-{
-#ifdef USE_MONITORS
-	VPROF_INCREMENT_COUNTER( "cameras rendered", 1 );
-	// Setup fog state for the camera.
-	fogparams_t oldFogParams;
-	float flOldZFar = 0.0f;
-
-	bool fogEnabled = pCameraEnt->IsFogEnabled();
-
-	CViewSetup monitorView = cameraView;
-
-	fogparams_t *pFogParams = NULL;
-
-	if ( fogEnabled )
-	{	
-		if ( !localPlayer )
-			return false;
-
-		pFogParams = localPlayer->GetFogParams();
-
-		// Save old fog data.
-		oldFogParams = *pFogParams;
-		flOldZFar = cameraView.zFar;
-
-		pFogParams->enable = true;
-		pFogParams->start = pCameraEnt->GetFogStart();
-		pFogParams->end = pCameraEnt->GetFogEnd();
-		pFogParams->farz = pCameraEnt->GetFogEnd();
-		pFogParams->maxdensity = pCameraEnt->GetFogMaxDensity();
-
-		unsigned char r, g, b;
-		pCameraEnt->GetFogColor( r, g, b );
-		pFogParams->colorPrimary.SetR( r );
-		pFogParams->colorPrimary.SetG( g );
-		pFogParams->colorPrimary.SetB( b );
-
-		monitorView.zFar = pCameraEnt->GetFogEnd();
-	}
-
-	monitorView.width = width;
-	monitorView.height = height;
-	monitorView.x = x;
-	monitorView.y = y;
-	monitorView.origin = pCameraEnt->GetAbsOrigin();
-	monitorView.angles = pCameraEnt->GetAbsAngles();
-	monitorView.fov = pCameraEnt->GetFOV();
-#ifdef MAPBASE
-	if (pCameraEnt->IsOrtho())
-	{
-		monitorView.m_bOrtho = true;
-		pCameraEnt->GetOrthoDimensions( monitorView.m_OrthoTop, monitorView.m_OrthoBottom,
-			monitorView.m_OrthoLeft, monitorView.m_OrthoRight );
-	}
-	else
-	{
-		monitorView.m_bOrtho = false;
-	}
-#else
-	monitorView.m_bOrtho = false;
-#endif
-	monitorView.m_flAspectRatio = pCameraEnt->UseScreenAspectRatio() ? 0.0f : 1.0f;
-	monitorView.m_bViewToProjectionOverride = false;
-
-#ifdef MAPBASE
-	// 
-	// Monitor sky handling
-	// 
-	if ( pCameraEnt->SkyMode() == SKYBOX_3DSKYBOX_VISIBLE )
-	{
-		int nClearFlags = (VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR);
-		bool bDrew3dSkybox = false;
-		SkyboxVisibility_t nSkyMode = pCameraEnt->SkyMode();
-
-		Frustum frustum;
-		render->Push3DView( monitorView, nClearFlags, pRenderTarget, (VPlane *)frustum );
-
-		// if the 3d skybox world is drawn, then don't draw the normal skybox
-		CSkyboxView *pSkyView = new CSkyboxView( this );
-		if ( ( bDrew3dSkybox = pSkyView->Setup( monitorView, &nClearFlags, &nSkyMode ) ) != false )
-		{
-			AddViewToScene( pSkyView );
-		}
-		SafeRelease( pSkyView );
-
-		ViewDrawScene( bDrew3dSkybox, nSkyMode, monitorView, nClearFlags, VIEW_MONITOR );
- 		render->PopView( frustum );
-	}
-	else
-	{
-		// @MULTICORE (toml 8/11/2006): this should be a renderer....
-		Frustum frustum;
- 		render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pRenderTarget, (VPlane *)frustum );
-		ViewDrawScene( false, SKYBOX_2DSKYBOX_VISIBLE, monitorView, 0, VIEW_MONITOR );
- 		render->PopView( frustum );
-	}
-#else
-	// @MULTICORE (toml 8/11/2006): this should be a renderer....
-	Frustum frustum;
- 	render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pRenderTarget, (VPlane *)frustum );
-	ViewDrawScene( false, SKYBOX_2DSKYBOX_VISIBLE, monitorView, 0, VIEW_MONITOR );
- 	render->PopView( frustum );
-#endif
-
-	// Reset the world fog parameters.
-	if ( fogEnabled )
-	{
-		if ( pFogParams )
-		{
-			*pFogParams = oldFogParams;
-		}
-		monitorView.zFar = flOldZFar;
-	}
-#endif // USE_MONITORS
-	return true;
-}
-
+////-----------------------------------------------------------------------------
+//// Purpose: Sets up scene and renders camera view
+//// Input  : cameraNum - 
+////			&cameraView
+////			*localPlayer - 
+////			x - 
+////			y - 
+////			width - 
+////			height - 
+////			highend - 
+//// Output : Returns true on success, false on failure.
+////-----------------------------------------------------------------------------
+//bool CViewRender::DrawOneMonitor( ITexture *pRenderTarget, int cameraNum, C_PointCamera *pCameraEnt, 
+//	const CViewSetup &cameraView, C_BasePlayer *localPlayer, int x, int y, int width, int height )
+//{
+//#ifdef USE_MONITORS
+//	VPROF_INCREMENT_COUNTER( "cameras rendered", 1 );
+//	// Setup fog state for the camera.
+//	fogparams_t oldFogParams;
+//	float flOldZFar = 0.0f;
+//
+//	bool fogEnabled = pCameraEnt->IsFogEnabled();
+//
+//	CViewSetup monitorView = cameraView;
+//
+//	fogparams_t *pFogParams = NULL;
+//
+//	if ( fogEnabled )
+//	{	
+//		if ( !localPlayer )
+//			return false;
+//
+//		pFogParams = localPlayer->GetFogParams();
+//
+//		// Save old fog data.
+//		oldFogParams = *pFogParams;
+//		flOldZFar = cameraView.zFar;
+//
+//		pFogParams->enable = true;
+//		pFogParams->start = pCameraEnt->GetFogStart();
+//		pFogParams->end = pCameraEnt->GetFogEnd();
+//		pFogParams->farz = pCameraEnt->GetFogEnd();
+//		pFogParams->maxdensity = pCameraEnt->GetFogMaxDensity();
+//
+//		unsigned char r, g, b;
+//		pCameraEnt->GetFogColor( r, g, b );
+//		pFogParams->colorPrimary.SetR( r );
+//		pFogParams->colorPrimary.SetG( g );
+//		pFogParams->colorPrimary.SetB( b );
+//
+//		monitorView.zFar = pCameraEnt->GetFogEnd();
+//	}
+//
+//	monitorView.width = width;
+//	monitorView.height = height;
+//	monitorView.x = x;
+//	monitorView.y = y;
+//	monitorView.origin = pCameraEnt->GetAbsOrigin();
+//	monitorView.angles = pCameraEnt->GetAbsAngles();
+//	monitorView.fov = pCameraEnt->GetFOV();
+//#ifdef MAPBASE
+//	if (pCameraEnt->IsOrtho())
+//	{
+//		monitorView.m_bOrtho = true;
+//		pCameraEnt->GetOrthoDimensions( monitorView.m_OrthoTop, monitorView.m_OrthoBottom,
+//			monitorView.m_OrthoLeft, monitorView.m_OrthoRight );
+//	}
+//	else
+//	{
+//		monitorView.m_bOrtho = false;
+//	}
+//#else
+//	monitorView.m_bOrtho = false;
+//#endif
+//	monitorView.m_flAspectRatio = pCameraEnt->UseScreenAspectRatio() ? 0.0f : 1.0f;
+//	monitorView.m_bViewToProjectionOverride = false;
+//
+//#ifdef MAPBASE
+//	// 
+//	// Monitor sky handling
+//	// 
+//	if ( pCameraEnt->SkyMode() == SKYBOX_3DSKYBOX_VISIBLE )
+//	{
+//		int nClearFlags = (VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR);
+//		bool bDrew3dSkybox = false;
+//		SkyboxVisibility_t nSkyMode = pCameraEnt->SkyMode();
+//
+//		Frustum frustum;
+//		render->Push3DView( monitorView, nClearFlags, pRenderTarget, (VPlane *)frustum );
+//
+//		// if the 3d skybox world is drawn, then don't draw the normal skybox
+//		CSkyboxView *pSkyView = new CSkyboxView( this );
+//		if ( ( bDrew3dSkybox = pSkyView->Setup( monitorView, &nClearFlags, &nSkyMode ) ) != false )
+//		{
+//			AddViewToScene( pSkyView );
+//		}
+//		SafeRelease( pSkyView );
+//
+//		ViewDrawScene( bDrew3dSkybox, nSkyMode, monitorView, nClearFlags, VIEW_MONITOR );
+// 		render->PopView( frustum );
+//	}
+//	else
+//	{
+//		// @MULTICORE (toml 8/11/2006): this should be a renderer....
+//		Frustum frustum;
+// 		render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pRenderTarget, (VPlane *)frustum );
+//		ViewDrawScene( false, SKYBOX_2DSKYBOX_VISIBLE, monitorView, 0, VIEW_MONITOR );
+// 		render->PopView( frustum );
+//	}
+//#else
+//	// @MULTICORE (toml 8/11/2006): this should be a renderer....
+//	Frustum frustum;
+// 	render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, pRenderTarget, (VPlane *)frustum );
+//	ViewDrawScene( false, SKYBOX_2DSKYBOX_VISIBLE, monitorView, 0, VIEW_MONITOR );
+// 	render->PopView( frustum );
+//#endif
+//
+//	// Reset the world fog parameters.
+//	if ( fogEnabled )
+//	{
+//		if ( pFogParams )
+//		{
+//			*pFogParams = oldFogParams;
+//		}
+//		monitorView.zFar = flOldZFar;
+//	}
+//#endif // USE_MONITORS
+//	return true;
+//}
+//
 
 void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 {
@@ -3319,7 +3319,7 @@ void CViewRender::DrawMonitors( const CViewSetup &cameraView )
 		if ( !pCameraEnt->IsActive() || pCameraEnt->IsDormant() )
 			continue;
 
-		if (!DrawCamera(pCameraEnt, cameraNum, cameraView, player))
+		if (!DrawCamera(pCameraEnt, cameraNum, cameraView,this, player))
 //		if ( !DrawOneMonitor( pCameraTarget, cameraNum, pCameraEnt, cameraView, player, 0, 0, width, height ) )
 			continue;
 

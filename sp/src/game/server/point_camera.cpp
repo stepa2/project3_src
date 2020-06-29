@@ -54,6 +54,8 @@ CPointCamera::CPointCamera()
 	
 	m_bFogEnable = false;
 
+	m_ResolutionHeight = m_ResolutionWidth = 256;
+
 #ifdef MAPBASE
 	// Equivalent to SKYBOX_2DSKYBOX_VISIBLE, the original sky setting
 	m_iSkyMode = 2;

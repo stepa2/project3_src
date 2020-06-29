@@ -17,24 +17,34 @@
 //-----------------------------------------------------------------------------
 // Link between entities and cameras
 //-----------------------------------------------------------------------------
-class CInfoCameraLink : public CLogicalEntity
+class CInfoCameraLink : public CBaseEntity
 {
-	DECLARE_CLASS( CInfoCameraLink, CLogicalEntity );
+	DECLARE_CLASS( CInfoCameraLink, CBaseEntity );
+	DECLARE_SERVERCLASS();
  	DECLARE_DATADESC();
 
 public:
 	CInfoCameraLink();
 	~CInfoCameraLink();
 
-	virtual void Activate();
+	void Activate() override;
+	int UpdateTransmitState() override
+	{
+		return SetTransmitState(FL_EDICT_ALWAYS);
+	}
 
 private:
 	void InputSetCamera(inputdata_t &inputdata);
 	void InputSetTargetEntity(inputdata_t &inputdata);
 	void SetCameraByName(const char *szName);
 
+#ifdef MAPBASE
+	CNetworkHandle(CPointCamera, m_hCamera);
+	CNetworkHandle(CBaseEntity, m_hTargetEntity);
+#else
 	CHandle<CPointCamera> m_hCamera;
 	EHANDLE m_hTargetEntity;
+#endif
 	string_t m_strPointCamera;
 
 	friend CBaseEntity *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCamera );
@@ -59,13 +69,27 @@ BEGIN_DATADESC( CInfoCameraLink )
 	DEFINE_FIELD( m_hTargetEntity,	FIELD_EHANDLE ),
 
 	// Outputs
+#ifdef MAPBASE
+	DEFINE_INPUTFUNC( FIELD_EHANDLE, "SetCamera", InputSetCamera ),
+#else
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetCamera", InputSetCamera ),
+#endif
 
 END_DATADESC()
 
 
 LINK_ENTITY_TO_CLASS( info_camera_link, CInfoCameraLink );
 
+//-----------------------------------------------------------------------------
+// Networking
+//-----------------------------------------------------------------------------
+
+#ifdef MAPBASE
+IMPLEMENT_SERVERCLASS_ST(CInfoCameraLink, DT_InfoCameraLink)
+	SendPropEHandle(SENDINFO(m_hCamera)),
+	SendPropEHandle(SENDINFO(m_hTargetEntity))
+END_SEND_TABLE()
+#endif
 
 //-----------------------------------------------------------------------------
 // Constructor, destructor
@@ -145,10 +169,10 @@ CBaseEntity *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCamera )
 //-----------------------------------------------------------------------------
 void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *pvs, int pvssize )
 {
-	for ( CPointCamera *pCameraEnt = GetPointCameraList(); pCameraEnt != NULL; pCameraEnt = pCameraEnt->m_pNext )
-	{
-		pCameraEnt->SetActive( false );
-	}
+	//for ( CPointCamera *pCameraEnt = GetPointCameraList(); pCameraEnt != NULL; pCameraEnt = pCameraEnt->m_pNext )
+	//{
+	//	pCameraEnt->SetActive( false );
+	//}
 	
 	int nNext;
 	for ( int i = g_InfoCameraLinkList.Head(); i != g_InfoCameraLinkList.InvalidIndex(); i = nNext )

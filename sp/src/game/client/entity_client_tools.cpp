@@ -741,7 +741,8 @@ void CClientTools::PostToolMessage( KeyValues *pKeyValues )
 
 	if ( !Q_stricmp( pKeyValues->GetName(), "QueryMonitorTexture" ) )
 	{
-		pKeyValues->SetPtr( "texture", GetCameraTexture() );
+		AssertMsg(0,"There are multiplie monitor textures");
+		//pKeyValues->SetPtr( "texture", GetCameraTexture() );
 		return;
 	}
 

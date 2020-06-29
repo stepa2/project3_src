@@ -14,14 +14,9 @@
 #include "c_baseentity.h"
 #include "basetypes.h"
 
-class CViewRender;
-class C_PointCamera;
-
-bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetup, CViewRender* viewRender, C_BasePlayer* player);
 
 class C_PointCamera : public C_BaseEntity
 {
-	friend bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetup, CViewRender* viewRender, C_BasePlayer* player);
 public:
 	DECLARE_CLASS( C_PointCamera, C_BaseEntity );
 	DECLARE_CLIENTCLASS();
@@ -42,13 +37,14 @@ public:
 	float			GetFogMaxDensity();
 	float			GetFogEnd();
 	bool			UseScreenAspectRatio() const { return m_bUseScreenAspectRatio; }
-	void			ClientThink() override;
-	void			Spawn() override;
+	void			PostDataUpdate(DataUpdateType_t updateType) override;
 #ifdef MAPBASE
 	virtual bool	IsOrtho() const { return false; }
 	virtual void	GetOrthoDimensions(float &up, float &dn, float &lf, float &rt) const {}
 
 	SkyboxVisibility_t	SkyMode() { return m_iSkyMode; }
+
+	ITexture*		GetRTTexture() {return m_RenderTargetTexture;}
 #endif
 
 	virtual void	GetToolRecordingState( KeyValues *msg );
@@ -103,6 +99,10 @@ private:
 #endif
 
 C_PointCamera *GetPointCameraList();
+
+class CViewRender;
+
+bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetup, CViewRender* viewRender, C_BasePlayer* player);
 
 
 #endif // C_POINTCAMERA_H

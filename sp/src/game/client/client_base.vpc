@@ -206,9 +206,11 @@ $Project
 			$File	"WorldDimsProxy.cpp"
 			$File	"functionproxy.h"
 			$File	"toggletextureproxy.h"
+			$File 	"proxy_camera_rt_replace.cpp"
 			
 		}
 	
+		$File	"c_info_camera_link.cpp"
 		$File	"hl2\C_Func_Monitor.cpp"
 		$File	"geiger.cpp"
 		$File	"history_resource.cpp"
@@ -693,6 +695,7 @@ $Project
 
 	$Folder	"Header Files"
 	{
+		$File	"c_info_camera_link.h"
 		$File	"animationlayer.h"
 		$File	"baseclientrendertargets.h"
 		$File	"beamdraw.h"

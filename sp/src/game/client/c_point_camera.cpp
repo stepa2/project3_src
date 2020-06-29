@@ -39,6 +39,10 @@ IMPLEMENT_CLIENTCLASS_DT( C_PointCamera, DT_PointCamera, CPointCamera )
 #endif
 END_RECV_TABLE()
 
+LINK_ENTITY_TO_CLASS( point_camera, C_PointCamera );
+
+LINK_ENTITY_TO_CLASS( point_camera_ortho, C_PointCameraOrtho );
+
 C_EntityClassList<C_PointCamera> g_PointCameraList;
 template<> C_PointCamera *C_EntityClassList<C_PointCamera>::m_pClassList = NULL;
 
@@ -58,13 +62,6 @@ C_PointCamera::C_PointCamera()
 
 	if(KeepRTTexture())
 		CreateRTTexture();
-}
-
-
-void C_PointCamera::Spawn()
-{
-	SetNextClientThink(
-		KeepRTTexture() ? CLIENT_THINK_NEVER : gpGlobals->curtime );
 }
 
 
@@ -107,10 +104,17 @@ float C_PointCamera::GetFogEnd()
 	return m_flFogEnd;
 }
 
-void C_PointCamera::ClientThink()
+void C_PointCamera::PostDataUpdate(DataUpdateType_t updateType)
 {
+	BaseClass::PostDataUpdate(updateType);
+
+	if(KeepRTTexture()) return;
+	
 	if (m_bPrevActive != m_bActive)
-		m_bActive ? CreateRTTexture() : ReleaseRTTexture();
+		if (m_bActive) 
+			CreateRTTexture();
+		else 
+			ReleaseRTTexture();
 	m_bPrevActive = m_bActive;
 }
 
@@ -131,12 +135,16 @@ bool C_PointCamera::KeepRTTexture() const
 
 void C_PointCamera::CreateRTTexture()
 {
+	char name_buffer[256];
+	size_t this_addr = (size_t)this;
+	V_sprintf_safe(name_buffer, "_rt_Camera_%i", this_addr);
+	
 	m_RenderTargetTexture.InitRenderTarget(
 		m_ResolutionWidth, m_ResolutionHeight,
 		RT_SIZE_DEFAULT,
 		materials->GetBackBufferFormat(), 
 		MATERIAL_RT_DEPTH_SHARED,
-		true);
+		true, name_buffer);
 }
 
 void C_PointCamera::ReleaseRTTexture()
@@ -148,19 +156,22 @@ void C_PointCamera::ReleaseRTTexture()
 
 void C_PointCamera::GetToolRecordingState( KeyValues *msg )
 {
-	BaseClass::GetToolRecordingState( msg );
+	AssertMsg(false,"Unimplemented (there can be more than one camera)");
+	
+	//BaseClass::GetToolRecordingState( msg );
 
-	unsigned char r, g, b;
-	static MonitorRecordingState_t state;
-	state.m_bActive = IsActive() && !IsDormant();
-	state.m_flFOV = GetFOV();
-	state.m_bFogEnabled = IsFogEnabled();
-	state.m_flFogStart = GetFogStart();
-	state.m_flFogEnd = GetFogEnd();
-	GetFogColor( r, g, b );
-	state.m_FogColor.SetColor( r, g, b, 255 );
-					  
-	msg->SetPtr( "monitor", &state );
+	//unsigned char r, g, b;
+	//static MonitorRecordingState_t state;
+	//state.m_bActive = IsActive() && !IsDormant();
+	//state.m_flFOV = GetFOV();
+	//state.m_bFogEnabled = IsFogEnabled();
+	//state.m_flFogStart = GetFogStart();
+	//state.m_flFogEnd = GetFogEnd();
+	//GetFogColor( r, g, b );
+	//state.m_FogColor.SetColor( r, g, b, 255 );
+	//
+	//				  
+	//msg->SetPtr( "monitor", &state );
 }
 
 
@@ -177,7 +188,7 @@ bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetu
 	VPROF_INCREMENT_COUNTER( "cameras rendered", 1 );
 
 #ifdef MAPBASE
-	ITexture* renderTarget = camera->m_RenderTargetTexture;
+	ITexture* renderTarget = camera->GetRTTexture();
 	if(IsErrorTexture(renderTarget)) return false;
 #else
 	ITexture* renderTarget = GetCameraTexture();

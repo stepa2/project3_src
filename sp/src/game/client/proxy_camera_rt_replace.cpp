@@ -50,6 +50,13 @@ IMaterial* CProxyCameraRTReplace::GetMaterial()
 	return _textureToReplace->GetOwningMaterial();
 }
 
+bool IsCameraActive(C_InfoCameraLink* link)
+{
+	if(link == nullptr) return false;
+	if(link->GetCamera() == nullptr) return false;
+	return link->GetCamera()->IsActive();
+}
+ 
 void CProxyCameraRTReplace::OnBind(C_BaseEntity* pBaseEntity)
 {
 	if(pBaseEntity == nullptr)
@@ -61,7 +68,7 @@ void CProxyCameraRTReplace::OnBind(C_BaseEntity* pBaseEntity)
 	
 	_cameraLink = GetLinkOf(pBaseEntity);
 
-	if(_cameraLink != nullptr && _cameraLink->GetCamera()->IsActive())
+	if(IsCameraActive(_cameraLink))
 		_textureToReplace->SetTextureValue(_cameraLink->GetCamera()->GetRTTexture());
 	else
 		_textureToReplace->SetStringValue("debug/debugempty");

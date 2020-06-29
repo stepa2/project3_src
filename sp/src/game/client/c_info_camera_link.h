@@ -19,6 +19,7 @@ public:
 
 private:
 	void PostDataUpdate(DataUpdateType_t updateType) override;
+	void Link();
 
 private:
 	

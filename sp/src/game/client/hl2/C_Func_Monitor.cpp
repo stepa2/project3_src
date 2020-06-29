@@ -17,11 +17,14 @@ public:
 
 // C_BaseEntity.
 public:
+	void Spawn() override { BaseClass::Spawn(); }
 	virtual bool	ShouldDraw();
 };
 
 IMPLEMENT_CLIENTCLASS_DT( C_FuncMonitor, DT_FuncMonitor, CFuncMonitor )
 END_RECV_TABLE()
+
+LINK_ENTITY_TO_CLASS( func_monitor, C_FuncMonitor );
 
 bool C_FuncMonitor::ShouldDraw()
 {

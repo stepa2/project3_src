@@ -10,6 +10,8 @@ IMPLEMENT_CLIENTCLASS_DT(C_InfoCameraLink, DT_InfoCameraLink, CInfoCameraLink)
 	RecvPropEHandle(RECVINFO(m_hTargetEntity))
 END_RECV_TABLE()
 
+LINK_ENTITY_TO_CLASS( info_camera_link, C_InfoCameraLink );
+
 static CUtlMap<C_BaseEntity*, C_InfoCameraLink*> _linksOf;
 
 bool C_BaseEntity_Ptr_LessFunc(C_BaseEntity* const& left, C_BaseEntity* const& right)
@@ -37,27 +39,31 @@ C_InfoCameraLink::~C_InfoCameraLink()
 
 void C_InfoCameraLink::Spawn()
 {
+
+
+//	if (m_hTargetEntity.Get() == nullptr) return;
+	
+//	ushort index = _linksOf.Find(m_hTargetEntity);
+//	if (index != _linksOf.InvalidIndex()) return;
+
+//	_linksOf.Insert(m_hTargetEntity, this);
+
 	BaseClass::Spawn();
-
-
-
 }
 
 void C_InfoCameraLink::PostDataUpdate(DataUpdateType_t updateType)
 {
+
+
+	if (m_hTargetEntity.Get() == nullptr) return;
+	
+	ushort index = _linksOf.Find(m_hTargetEntity);
+
+	if (index != _linksOf.InvalidIndex()) return;
+
+	_linksOf.Insert(m_hTargetEntity, this);
+	
 	BaseClass::PostDataUpdate(updateType);
-
-	ushort index = _linksOf.Find(GetTarget());
-
-	if (index == _linksOf.InvalidIndex())
-		_linksOf.Insert(GetTarget(), this);
-	
-	char const* camName = GetCamera()->GetEntityName();
-	camName = camName?camName:"<unnamed camera>";
-	char const* targetName = GetTarget()->GetEntityName();
-	targetName = targetName?targetName:"<unnamed target>";
-	
-	Msg("info_camera_link: %s %s\n", camName, targetName);
 }
 
 

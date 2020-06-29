@@ -22,37 +22,25 @@ protected:
 
 bool CProxyCameraRTReplace::Init(IMaterial* pMaterial, KeyValues* pKeyValues)
 {
-	int count = pMaterial->ShaderParamCount();
-	IMaterialVar** params = pMaterial->GetShaderParams();
-	
-	for (int i = 0; i < count; ++i)
+	const char* paramToReplace = pKeyValues->GetString("paramToReplace",nullptr);
+
+	if (paramToReplace == nullptr)
 	{
-		IMaterialVar* param = params[i];
-		
-		if(param->GetType() != MATERIAL_VAR_TYPE_TEXTURE
-			&& param->GetType() != MATERIAL_VAR_TYPE_STRING) continue;
-
-		char const* value = param->GetStringValue();
-			
-		if(stricmp(value,"_rt_Camera") != 0) continue;
-
-#ifdef DEBUG
-		if(_textureToReplace != nullptr)
-		{
-			AssertMsg(false, "Replacing more than one texture is not supported");
-			return false;
-		}
-#endif
-		
-
-		_textureToReplace = param;
-
-#ifndef DEBUG
-		break;
-#endif
+		Warning("CameraRTReplace in %s: paramToReplace is not specified", pMaterial->GetName());
+		return false;
 	}
 
-	return _textureToReplace != nullptr;
+	bool isOk = true;
+	
+	_textureToReplace = pMaterial->FindVar(paramToReplace, &isOk);
+
+	if(!isOk)
+	{
+		Warning("CameraRTReplace in %s: parameter \"%s\" specified in paramToReplace not found", pMaterial->GetName(), paramToReplace);
+		return false;
+	}
+
+	return true;
 }
 
 IMaterial* CProxyCameraRTReplace::GetMaterial()
@@ -64,12 +52,6 @@ IMaterial* CProxyCameraRTReplace::GetMaterial()
 
 void CProxyCameraRTReplace::OnBind(C_BaseEntity* pBaseEntity)
 {
-	if(_textureToReplace == nullptr)
-	{
-		AssertMsg(false, "Nothing to replace");
-		return;
-	}
-	
 	if(pBaseEntity == nullptr)
 	{
 		AssertMsg(false, "CameraRTReplace proxy used on material of non-entity object");

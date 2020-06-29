@@ -138,13 +138,22 @@ void C_PointCamera::CreateRTTexture()
 	char name_buffer[256];
 	size_t this_addr = (size_t)this;
 	V_sprintf_safe(name_buffer, "_rt_Camera_%i", this_addr);
-	
-	m_RenderTargetTexture.InitRenderTarget(
+
+	materials->BeginRenderTargetAllocation();
+	/*m_RenderTargetTexture.InitRenderTarget(
 		m_ResolutionWidth, m_ResolutionHeight,
 		RT_SIZE_DEFAULT,
 		materials->GetBackBufferFormat(), 
 		MATERIAL_RT_DEPTH_SHARED,
-		true, name_buffer);
+		true, name_buffer);*/
+	m_RenderTargetTexture.Init(materials->CreateNamedRenderTargetTextureEx2(
+		name_buffer,
+		m_ResolutionWidth, m_ResolutionHeight, RT_SIZE_LITERAL,
+		materials->GetBackBufferFormat(),
+		MATERIAL_RT_DEPTH_SHARED, 
+		0,
+		CREATERENDERTARGETFLAGS_HDR ));
+	materials->EndRenderTargetAllocation();
 }
 
 void C_PointCamera::ReleaseRTTexture()
@@ -277,10 +286,10 @@ bool DrawCamera(C_PointCamera* camera, int cameraNum, const CViewSetup& viewSetu
 	}
 	else
 #endif
-	{
+	{		
 		// @MULTICORE (toml 8/11/2006): this should be a renderer....
 		Frustum frustum;
- 		render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, renderTarget, (VPlane *)frustum );
+ 		render->Push3DView( monitorView, VIEW_CLEAR_DEPTH | VIEW_CLEAR_COLOR, renderTarget, frustum );
 		viewRender->ViewDrawScene( false, SKYBOX_2DSKYBOX_VISIBLE, monitorView, 0, VIEW_MONITOR );
  		render->PopView( frustum );
 	}

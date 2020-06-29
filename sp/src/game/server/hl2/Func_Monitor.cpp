@@ -19,15 +19,20 @@ class CFuncMonitor : public CFuncBrush
 	DECLARE_SERVERCLASS();
 
 public:
-	virtual void Activate();
-	virtual void UpdateOnRemove();
+	void Spawn() override;
+	void Activate() override;
+	void UpdateOnRemove() override;
+	int UpdateTransmitState() override
+	{
+		return SetTransmitState(FL_EDICT_PVSCHECK);
+	}
 
 private:
 	void InputSetCamera(inputdata_t &inputdata);
 	void SetCameraByName(const char *szName);
 	void ReleaseCameraLink();
 
-	EHANDLE m_hInfoCameraLink;
+	CHandle<CInfoCameraLink> m_hInfoCameraLink;
 };
 
 // automatically hooks in the system's callbacks
@@ -46,6 +51,11 @@ LINK_ENTITY_TO_CLASS( func_monitor, CFuncMonitor );
 
 IMPLEMENT_SERVERCLASS_ST( CFuncMonitor, DT_FuncMonitor )
 END_SEND_TABLE()
+
+void CFuncMonitor::Spawn()
+{
+	m_hInfoCameraLink = CreateInfoCameraLink(this, nullptr);
+}
 
 
 //-----------------------------------------------------------------------------
@@ -72,7 +82,7 @@ void CFuncMonitor::ReleaseCameraLink()
 	if ( m_hInfoCameraLink )
 	{
 		UTIL_Remove( m_hInfoCameraLink );
-		m_hInfoCameraLink = NULL;
+		m_hInfoCameraLink = nullptr;
 
 		// Keep the target up-to-date for save/load
 		m_target = NULL_STRING;
@@ -85,18 +95,7 @@ void CFuncMonitor::ReleaseCameraLink()
 //-----------------------------------------------------------------------------
 void CFuncMonitor::SetCameraByName(const char *szName)
 {
-	ReleaseCameraLink();
-	CBaseEntity *pBaseEnt = gEntList.FindEntityByName( NULL, szName );
-	if( pBaseEnt )
-	{
-		CPointCamera *pCamera = dynamic_cast<CPointCamera *>( pBaseEnt );
-		if( pCamera )
-		{
-			// Keep the target up-to-date for save/load
-			m_target = MAKE_STRING( szName );
-			m_hInfoCameraLink = CreateInfoCameraLink( this, pCamera ); 
-		}
-	}
+	m_hInfoCameraLink->SetCameraByName(szName);
 }
 
 

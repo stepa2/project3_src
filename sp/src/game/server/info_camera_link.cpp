@@ -14,42 +14,6 @@
 #include "tier0/memdbgon.h"
 
 
-//-----------------------------------------------------------------------------
-// Link between entities and cameras
-//-----------------------------------------------------------------------------
-class CInfoCameraLink : public CBaseEntity
-{
-	DECLARE_CLASS( CInfoCameraLink, CBaseEntity );
-	DECLARE_SERVERCLASS();
- 	DECLARE_DATADESC();
-
-public:
-	CInfoCameraLink();
-	~CInfoCameraLink();
-
-	void Activate() override;
-	int UpdateTransmitState() override
-	{
-		return SetTransmitState(FL_EDICT_ALWAYS);
-	}
-
-private:
-	void InputSetCamera(inputdata_t &inputdata);
-	void InputSetTargetEntity(inputdata_t &inputdata);
-	void SetCameraByName(const char *szName);
-
-#ifdef MAPBASE
-	CNetworkHandle(CPointCamera, m_hCamera);
-	CNetworkHandle(CBaseEntity, m_hTargetEntity);
-#else
-	CHandle<CPointCamera> m_hCamera;
-	EHANDLE m_hTargetEntity;
-#endif
-	string_t m_strPointCamera;
-
-	friend CBaseEntity *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCamera );
-	friend void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *pvs, int pvssize );
-};
 
 
 //-----------------------------------------------------------------------------
@@ -118,7 +82,7 @@ void CInfoCameraLink::Activate()
 		SetCameraByName( STRING(m_strPointCamera) );
 	}
 
-	if ( !m_hTargetEntity )
+	if ( m_hTargetEntity == nullptr )
 	{
 		m_hTargetEntity = gEntList.FindEntityByName( NULL, STRING(m_target) );
 	}
@@ -151,7 +115,7 @@ void CInfoCameraLink::InputSetCamera(inputdata_t &inputdata)
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-CBaseEntity *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCamera )
+CInfoCameraLink *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCamera )
 {
 	CInfoCameraLink *pInfoCameraLink = (CInfoCameraLink*)CreateEntityByName( "info_camera_link" );
 	if ( !pInfoCameraLink )

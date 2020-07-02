@@ -54,6 +54,7 @@ END_SEND_TABLE()
 
 void CFuncMonitor::Spawn()
 {
+	BaseClass::Spawn();
 	m_hInfoCameraLink = CreateInfoCameraLink(this, nullptr);
 }
 

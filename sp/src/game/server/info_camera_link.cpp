@@ -33,11 +33,11 @@ BEGIN_DATADESC( CInfoCameraLink )
 	DEFINE_FIELD( m_hTargetEntity,	FIELD_EHANDLE ),
 
 	// Outputs
-#ifdef MAPBASE
-	DEFINE_INPUTFUNC( FIELD_EHANDLE, "SetCamera", InputSetCamera ),
-#else
+//#ifdef MAPBASE
+//	DEFINE_INPUTFUNC( FIELD_EHANDLE, "SetCamera", InputSetCamera ),
+//#else
 	DEFINE_INPUTFUNC( FIELD_STRING, "SetCamera", InputSetCamera ),
-#endif
+//#endif
 
 END_DATADESC()
 
@@ -133,10 +133,10 @@ CInfoCameraLink *CreateInfoCameraLink( CBaseEntity *pTarget, CPointCamera *pCame
 //-----------------------------------------------------------------------------
 void PointCameraSetupVisibility( CBaseEntity *pPlayer, int area, unsigned char *pvs, int pvssize )
 {
-	//for ( CPointCamera *pCameraEnt = GetPointCameraList(); pCameraEnt != NULL; pCameraEnt = pCameraEnt->m_pNext )
-	//{
-	//	pCameraEnt->SetActive( false );
-	//}
+	for ( CPointCamera *pCameraEnt = GetPointCameraList(); pCameraEnt != nullptr; pCameraEnt = pCameraEnt->m_pNext )
+	{
+		pCameraEnt->SetActive( false );
+	}
 	
 	int nNext;
 	for ( int i = g_InfoCameraLinkList.Head(); i != g_InfoCameraLinkList.InvalidIndex(); i = nNext )

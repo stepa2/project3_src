@@ -214,7 +214,7 @@ void CPointCamera::InputSetOn( inputdata_t &inputdata )
 void CPointCamera::InputSetOff( inputdata_t &inputdata )
 {
 	m_bIsOn = false;
-		( false );
+	SetActive( false );
 }
 
 BEGIN_DATADESC( CPointCamera )

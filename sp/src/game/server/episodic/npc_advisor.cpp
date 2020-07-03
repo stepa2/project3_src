@@ -28,6 +28,7 @@
 #include "particle_parse.h"
 #include "weapon_physcannon.h"
 // #include "mathlib/noise.h"
+#include <utility>
 
 // this file contains the definitions for the message ID constants (eg ADVISOR_MSG_START_BEAM etc)
 #include "npc_advisor_shared.h"
@@ -785,8 +786,6 @@ void CNPC_Advisor::StartTask( const Task_t *pTask )
 		}
 	}
 }
-
-#include <utility>
 
 //-----------------------------------------------------------------------------
 // todo: find a way to guarantee that objects are made pickupable again when bailing out of a task

@@ -44,7 +44,11 @@ public:
 
 	SkyboxVisibility_t	SkyMode() { return m_iSkyMode; }
 
-	ITexture*		GetRTTexture() {return m_RenderTargetTexture;}
+	ITexture*		GetRTTexture()
+	{
+		Assert(m_RenderTargetTexture.IsValid());
+		return m_RenderTargetTexture;
+	}
 #endif
 
 	virtual void	GetToolRecordingState( KeyValues *msg );

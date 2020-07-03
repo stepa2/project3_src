@@ -64,14 +64,14 @@ void CProxyCameraRTReplace::OnBind(C_BaseEntity* pBaseEntity)
 		AssertMsg(false, "CameraRTReplace proxy used on material of non-entity object");
 		return;
 	}
-
+		
 	
 	_cameraLink = GetLinkOf(pBaseEntity);
-
+	
 	if(IsCameraActive(_cameraLink))
 		_textureToReplace->SetTextureValue(_cameraLink->GetCamera()->GetRTTexture());
 	else
-		_textureToReplace->SetStringValue("debug/debugempty");
+		_textureToReplace->SetStringValue("tools/toolsblack");
 }
 
 

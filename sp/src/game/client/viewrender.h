@@ -273,6 +273,9 @@ protected:
 //-----------------------------------------------------------------------------
 // Standard 3d skybox view
 //-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+// Standard 3d skybox view
+//-----------------------------------------------------------------------------
 class CSkyboxView : public CRendering3dView
 {
 	DECLARE_CLASS( CSkyboxView, CRendering3dView );
@@ -298,6 +301,10 @@ protected:
 
 	void			Enable3dSkyboxFog( void );
 	void			DrawInternal( view_id_t iSkyBoxViewID, bool bInvokePreAndPostRender, ITexture *pRenderTarget, ITexture *pDepthTarget );
+
+#ifdef MAPBASE
+	void			CalculateSkyAngles( const QAngle &angAngles );
+#endif
 
 	sky3dparams_t *	PreRender3dSkyboxWorld( SkyboxVisibility_t nSkyboxVisible );
 

@@ -1245,6 +1245,11 @@ public:
 	void				VScriptClearCondition( const char *szCondition ) { ClearCondition( GetConditionID( szCondition ) ); }
 
 	HSCRIPT				VScriptGetExpresser();
+
+	HSCRIPT				VScriptGetCine();
+	int					GetScriptState() { return m_scriptState; }
+
+	HSCRIPT				VScriptGetSquad();
 #endif
 
 	//-----------------------------------------------------
@@ -1715,7 +1720,7 @@ public:
 	virtual bool		DoHolster(void);
 	virtual bool		DoUnholster(void);
 
-	virtual bool		ShouldUnholsterWeapon() { return GetState() == NPC_STATE_COMBAT && CanUnholsterWeapon(); }
+	virtual bool		ShouldUnholsterWeapon() { return GetState() == NPC_STATE_COMBAT; }
 	virtual bool		CanUnholsterWeapon() { return IsWeaponHolstered(); }
 
 	void				InputGiveWeaponHolstered( inputdata_t &inputdata );

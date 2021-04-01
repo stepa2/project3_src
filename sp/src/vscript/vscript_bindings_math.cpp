@@ -169,6 +169,11 @@ BEGIN_SCRIPTDESC_ROOT_NAMED( Quaternion, "Quaternion", "A quaternion." )
 	DEFINE_SCRIPT_INSTANCE_HELPER( &g_QuaternionScriptInstanceHelper )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptInit, "Init", "Creates a quaternion with the given values." )
 
+	DEFINE_MEMBERVAR( "x", FIELD_FLOAT, "The quaternion's i axis component." )
+	DEFINE_MEMBERVAR( "y", FIELD_FLOAT, "The quaternion's j axis component." )
+	DEFINE_MEMBERVAR( "z", FIELD_FLOAT, "The quaternion's k axis component." )
+	DEFINE_MEMBERVAR( "w", FIELD_FLOAT, "The quaternion's scalar component." )
+
 END_SCRIPTDESC();
 
 //-----------------------------------------------------------------------------
@@ -176,7 +181,7 @@ END_SCRIPTDESC();
 bool CScriptQuaternionInstanceHelper::ToString( void *p, char *pBuf, int bufSize )
 {
 	Quaternion *pQuat = ((Quaternion *)p);
-	V_snprintf( pBuf, bufSize, "(quaternion: (%f, %f, %f, %f))", pQuat->x, pQuat->y, pQuat->z, pQuat->w );
+	V_snprintf( pBuf, bufSize, "(Quaternion %p [%f %f %f %f])", (void*)pQuat, pQuat->x, pQuat->y, pQuat->z, pQuat->w );
 	return true; 
 }
 
@@ -385,6 +390,11 @@ float ScriptCalcDistanceToLineSegment( const Vector &point, const Vector &vLineA
 	return CalcDistanceToLineSegment( point, vLineA, vLineB );
 }
 
+inline float ScriptExponentialDecay( float decayTo, float decayTime, float dt )
+{
+	return ExponentialDecay( decayTo, decayTime, dt );
+}
+
 void RegisterMathBaseBindings( IScriptVM *pVM )
 {
 	ScriptRegisterConstantNamed( pVM, ((float)(180.f / M_PI_F)), "RAD2DEG", "" );
@@ -448,4 +458,12 @@ void RegisterMathBaseBindings( IScriptVM *pVM )
 	ScriptRegisterFunctionNamed( pVM, ScriptCalcClosestPointOnLine, "CalcClosestPointOnLine", "Returns the closest point on a line." );
 	ScriptRegisterFunctionNamed( pVM, ScriptCalcDistanceToLineSegment, "CalcDistanceToLineSegment", "Returns the distance to a line segment." );
 	ScriptRegisterFunctionNamed( pVM, ScriptCalcClosestPointOnLineSegment, "CalcClosestPointOnLineSegment", "Returns the closest point on a line segment." );
+
+	ScriptRegisterFunction( pVM, SimpleSplineRemapVal, "remaps a value in [startInterval, startInterval+rangeInterval] from linear to spline using SimpleSpline" );
+	ScriptRegisterFunction( pVM, SimpleSplineRemapValClamped, "remaps a value in [startInterval, startInterval+rangeInterval] from linear to spline using SimpleSpline" );
+	ScriptRegisterFunction( pVM, Bias, "The curve is biased towards 0 or 1 based on biasAmt, which is between 0 and 1." );
+	ScriptRegisterFunction( pVM, Gain, "Gain is similar to Bias, but biasAmt biases towards or away from 0.5." );
+	ScriptRegisterFunction( pVM, SmoothCurve, "SmoothCurve maps a 0-1 value into another 0-1 value based on a cosine wave" );
+	ScriptRegisterFunction( pVM, SmoothCurve_Tweak, "SmoothCurve peaks at flPeakPos, flPeakSharpness controls the sharpness of the peak" );
+	ScriptRegisterFunctionNamed( pVM, ScriptExponentialDecay, "ExponentialDecay", "decayTo is factor the value should decay to in decayTime" );
 }

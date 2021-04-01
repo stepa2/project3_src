@@ -303,10 +303,11 @@ CSimpleSimTimer CAI_BaseNPC::m_AnyUpdateEnemyPosTimer;
 
 #ifdef MAPBASE_VSCRIPT
 // TODO: Better placement?
-ScriptHook_t	g_Hook_QueryHearSound;
-ScriptHook_t	g_Hook_QuerySeeEntity;
-ScriptHook_t	g_Hook_TranslateActivity;
-ScriptHook_t	g_Hook_TranslateSchedule;
+ScriptHook_t	CAI_BaseNPC::g_Hook_QueryHearSound;
+ScriptHook_t	CAI_BaseNPC::g_Hook_QuerySeeEntity;
+ScriptHook_t	CAI_BaseNPC::g_Hook_TranslateActivity;
+ScriptHook_t	CAI_BaseNPC::g_Hook_TranslateSchedule;
+ScriptHook_t	CAI_BaseNPC::g_Hook_GetActualShootPosition;
 #endif
 
 //
@@ -562,7 +563,7 @@ void CAI_BaseNPC::CleanupOnDeath( CBaseEntity *pCulprit, bool bFireDeathOutput )
 		RemoveActorFromScriptedScenes( this, false /*all scenes*/ );
 	}
 	else
-		DevMsg( "Unexpected double-death-cleanup\n" );
+		CGMsg( 1, CON_GROUP_NPC_AI, "Unexpected double-death-cleanup\n" );
 }
 
 void CAI_BaseNPC::SelectDeathPose( const CTakeDamageInfo &info )
@@ -2532,7 +2533,7 @@ void CAI_BaseNPC::OnListened()
 				case SOUND_PLAYER_VEHICLE:	condition = COND_HEAR_PLAYER;			break;
 
 				default:
-					DevMsg( "**ERROR: NPC %s hearing sound of unknown type %d!\n", GetClassname(), pCurrentSound->SoundType() );
+					CGMsg( 1, CON_GROUP_NPC_AI, "**ERROR: NPC %s hearing sound of unknown type %d!\n", GetClassname(), pCurrentSound->SoundType() );
 					break;
 			}
 		}
@@ -2720,7 +2721,7 @@ CSound* CAI_BaseNPC::GetBestSound( int validTypes )
 		return m_pLockedBestSound;
 	CSound *pResult = GetSenses()->GetClosestSound( false, validTypes );
 	if ( pResult == NULL)
-		DevMsg( "Warning: NULL Return from GetBestSound\n" ); // condition previously set now no longer true. Have seen this when play too many sounds...
+		CGMsg( 1, CON_GROUP_NPC_AI, "Warning: NULL Return from GetBestSound\n" ); // condition previously set now no longer true. Have seen this when play too many sounds...
 	return pResult;
 }
 
@@ -2732,7 +2733,7 @@ CSound* CAI_BaseNPC::GetBestScent( void )
 {
 	CSound *pResult = GetSenses()->GetClosestSound( true );
 	if ( pResult == NULL)
-		DevMsg("Warning: NULL Return from GetBestScent\n" );
+		CGMsg( 1, CON_GROUP_NPC_AI, "Warning: NULL Return from GetBestScent\n" );
 	return pResult;
 }
 
@@ -4806,7 +4807,11 @@ void CAI_BaseNPC::SetState( NPC_STATE State )
 		if ( GetEnemy() != NULL )
 		{
 			SetEnemy( NULL ); // not allowed to have an enemy anymore.
+#ifdef MAPBASE
+			CGMsg( 2, CON_GROUP_NPC_AI, "Stripped enemy pointer from NPC going back to idle\n" );
+#else
 			DevMsg( 2, "Stripped\n" );
+#endif
 		}
 		break;
 	}
@@ -5199,7 +5204,7 @@ void CAI_BaseNPC::GatherConditions( void )
 				// @Note (toml 05-05-04): There seems to be a case where an NPC can not respond
 				//						  to COND_NEW_ENEMY. Only evidence right now is save
 				//						  games after the fact, so for now, just patching it up
-				DevMsg( 2, "Had to force COND_NEW_ENEMY\n" );
+				CGMsg( 2, CON_GROUP_NPC_AI, "Had to force COND_NEW_ENEMY\n" );
 				SetCondition(COND_NEW_ENEMY);
 			}
 		}
@@ -8528,7 +8533,7 @@ bool CAI_BaseNPC::InitSquad( void )
 	{
 		if ( !m_SquadName )
 		{
-			DevMsg(2, "Found %s that isn't in a squad\n",GetClassname());
+			CGMsg( 2, CON_GROUP_NPC_AI, "Found %s that isn't in a squad\n", GetClassname() );
 		}
 		else
 		{
@@ -9181,7 +9186,7 @@ void CAI_BaseNPC::SetDefaultEyeOffset ( void )
 		{
 			if ( Classify() != CLASS_NONE )
 			{
-				DevMsg( "WARNING: %s(%s) has no eye offset in .qc!\n", GetClassname(), STRING(GetModelName()) );
+				CGMsg( 1, CON_GROUP_NPC_AI, "WARNING: %s(%s) has no eye offset in .qc!\n", GetClassname(), STRING( GetModelName() ) );
 			}
 			VectorAdd( WorldAlignMins(), WorldAlignMaxs(), m_vDefaultEyeOffset );
 			m_vDefaultEyeOffset *= 0.75;
@@ -10683,6 +10688,19 @@ void CAI_BaseNPC::CollectShotStats( const Vector &vecShootOrigin, const Vector &
 //-----------------------------------------------------------------------------
 Vector CAI_BaseNPC::GetActualShootPosition( const Vector &shootOrigin )
 {
+#ifdef MAPBASE_VSCRIPT
+	if (m_ScriptScope.IsInitialized() && g_Hook_GetActualShootPosition.CanRunInScope(m_ScriptScope))
+	{
+		ScriptVariant_t functionReturn;
+		ScriptVariant_t args[] = { shootOrigin, ToHScript( GetEnemy() ) };
+		if (g_Hook_GetActualShootPosition.Call( m_ScriptScope, &functionReturn, args ))
+		{
+			if (functionReturn.m_type == FIELD_VECTOR && functionReturn.m_pVector->LengthSqr() != 0.0f)
+				return *functionReturn.m_pVector;
+		}
+	}
+#endif
+
 	// Project the target's location into the future.
 	Vector vecEnemyLKP = GetEnemyLKP();
 	Vector vecEnemyOffset = GetEnemy()->BodyTarget( shootOrigin ) - GetEnemy()->GetAbsOrigin();
@@ -11392,7 +11410,7 @@ bool CAI_BaseNPC::ChooseEnemy( void )
 	}
 	else if ( !fHaveCondNewEnemy && !fHaveCondLostEnemy && GetCurSchedule() )
 	{
-		DevMsg( 2, "WARNING: AI enemy went NULL but schedule (%s) is not interested\n", GetCurSchedule()->GetName() );
+		CGMsg( 2, CON_GROUP_NPC_AI, "WARNING: AI enemy went NULL but schedule (%s) is not interested\n", GetCurSchedule()->GetName() );
 	}
 
 	m_bSkippedChooseEnemy = false;
@@ -12016,6 +12034,15 @@ BEGIN_ENT_SCRIPTDESC( CAI_BaseNPC, CBaseCombatCharacter, "The base class all NPC
 
 	DEFINE_SCRIPTFUNC_NAMED( VScriptGetState, "GetNPCState", "Get the NPC's current state." )
 
+	DEFINE_SCRIPTFUNC_NAMED( VScriptWake, "Wake", "Awakens the NPC if it is currently asleep." )
+	DEFINE_SCRIPTFUNC_NAMED( VScriptSleep, "Sleep", "Puts the NPC into a sleeping state." )
+
+	DEFINE_SCRIPTFUNC_NAMED( VScriptGetSleepState, "GetSleepState", "Get the NPC's sleep state. (see AISS_ set of constants)" )
+	DEFINE_SCRIPTFUNC_NAMED( VScriptSetSleepState, "SetSleepState", "Set the NPC's sleep state. (see AISS_ set of constants)" )
+	DEFINE_SCRIPTFUNC( AddSleepFlags, "Add to the NPC's sleep flags. (see AI_SLEEP_ set of constants)" )
+	DEFINE_SCRIPTFUNC( RemoveSleepFlags, "Remove from NPC's sleep flags. (see AI_SLEEP_ set of constants)" )
+	DEFINE_SCRIPTFUNC( HasSleepFlags, "Return true if the NPC has the specified sleep flags. (see AI_SLEEP_ set of constants)" )
+
 	DEFINE_SCRIPTFUNC_NAMED( VScriptGetHintGroup, "GetHintGroup", "Get the name of the NPC's hint group." )
 	DEFINE_SCRIPTFUNC_NAMED( VScriptGetHintNode, "GetHintNode", "Get the NPC's current AI hint." )
 
@@ -12062,19 +12089,23 @@ BEGIN_ENT_SCRIPTDESC( CAI_BaseNPC, CBaseCombatCharacter, "The base class all NPC
 	// 
 	// Hooks
 	// 
-	BEGIN_SCRIPTHOOK( g_Hook_QueryHearSound, "QueryHearSound", FIELD_BOOLEAN, "Called when the NPC is deciding whether to hear a CSound or not." )
+	BEGIN_SCRIPTHOOK( CAI_BaseNPC::g_Hook_QueryHearSound, "QueryHearSound", FIELD_BOOLEAN, "Called when the NPC is deciding whether to hear a CSound or not." )
 		DEFINE_SCRIPTHOOK_PARAM( "sound", FIELD_HSCRIPT )
 	END_SCRIPTHOOK()
-	BEGIN_SCRIPTHOOK( g_Hook_QuerySeeEntity, "QuerySeeEntity", FIELD_BOOLEAN, "Called when the NPC is deciding whether to see an entity or not." )
+	BEGIN_SCRIPTHOOK( CAI_BaseNPC::g_Hook_QuerySeeEntity, "QuerySeeEntity", FIELD_BOOLEAN, "Called when the NPC is deciding whether to see an entity or not." )
 		DEFINE_SCRIPTHOOK_PARAM( "entity", FIELD_HSCRIPT )
 	END_SCRIPTHOOK()
-	BEGIN_SCRIPTHOOK( g_Hook_TranslateActivity, "NPC_TranslateActivity", FIELD_VARIANT, "Called when the NPC is translating their current activity. The activity is provided in both string and ID form. Should return either an activity string or an activity ID. Return -1 to not translate." )
+	BEGIN_SCRIPTHOOK( CAI_BaseNPC::g_Hook_TranslateActivity, "NPC_TranslateActivity", FIELD_VARIANT, "Called when the NPC is translating their current activity. The activity is provided in both string and ID form. Should return either an activity string or an activity ID. Return -1 to not translate." )
 		DEFINE_SCRIPTHOOK_PARAM( "activity", FIELD_CSTRING )
 		DEFINE_SCRIPTHOOK_PARAM( "activity_id", FIELD_INTEGER )
 	END_SCRIPTHOOK()
-	BEGIN_SCRIPTHOOK( g_Hook_TranslateSchedule, "NPC_TranslateSchedule", FIELD_VARIANT, "Called when the NPC is translating their current schedule. The schedule is provided in both string and ID form. Should return either a schedule string or a schedule ID. Return -1 to not translate." )
+	BEGIN_SCRIPTHOOK( CAI_BaseNPC::g_Hook_TranslateSchedule, "NPC_TranslateSchedule", FIELD_VARIANT, "Called when the NPC is translating their current schedule. The schedule is provided in both string and ID form. Should return either a schedule string or a schedule ID. Return -1 to not translate." )
 		DEFINE_SCRIPTHOOK_PARAM( "schedule", FIELD_CSTRING )
 		DEFINE_SCRIPTHOOK_PARAM( "schedule_id", FIELD_INTEGER )
+	END_SCRIPTHOOK()
+	BEGIN_SCRIPTHOOK( CAI_BaseNPC::g_Hook_GetActualShootPosition, "GetActualShootPosition", FIELD_VOID, "Called when the NPC is getting their actual shoot position, using the default shoot position as the parameter. (NOTE: NPCs which override this themselves might not always use this hook!)" )
+		DEFINE_SCRIPTHOOK_PARAM( "shootOrigin", FIELD_VECTOR )
+		DEFINE_SCRIPTHOOK_PARAM( "target", FIELD_HSCRIPT )
 	END_SCRIPTHOOK()
 
 END_SCRIPTDESC();
@@ -12375,7 +12406,7 @@ void CAI_BaseNPC::DiscardScheduleState()
 		// for now, just go back to idle and let the AI figure out what to do.
 		SetState( NPC_STATE_IDLE );
 		SetIdealState( NPC_STATE_IDLE );
-		DevMsg(1, "Scripted Sequence stripped on level transition for %s\n", GetDebugName() );
+		CGMsg( 1, CON_GROUP_NPC_SCRIPTS, "Scripted Sequence stripped on level transition for %s\n", GetDebugName() );
 	}
 }
 
@@ -12759,7 +12790,7 @@ void CAI_BaseNPC::UpdateOnRemove(void)
 	if ( !m_bDidDeathCleanup )
 	{
 		if ( m_NPCState == NPC_STATE_DEAD )
-			DevMsg( "May not have cleaned up on NPC death\n");
+			CGMsg( 1, CON_GROUP_NPC_AI, "May not have cleaned up on NPC death\n" );
 
 		CleanupOnDeath( NULL, false );
 	}
@@ -13894,7 +13925,7 @@ static void AIMsgGuts( CAI_BaseNPC *pAI, unsigned flags, const char *pszMsg )
 	else
 		pszFmt2 = "%s (%s: %d/%s) [%d]";
 	
-	DevMsg( pszFmt2, 
+	CGMsg( 1, CON_GROUP_NPC_AI, pszFmt2, 
 		 pszMsg, 
 		 pAI->GetClassname(),
 		 pAI->entindex(),

@@ -26,6 +26,7 @@
 
 #include "con_nprint.h"
 #include "particle_parse.h"
+#include "npcevent.h"
 
 #include "vscript_funcs_shared.h"
 #include "vscript_singletons.h"
@@ -81,8 +82,29 @@ void ParseScriptTableKeyValues( CBaseEntity *pEntity, HSCRIPT hKV )
 		switch (varValue.m_type)
 		{
 			case FIELD_CSTRING:		pEntity->KeyValue( varKey.m_pszString, varValue.m_pszString ); break;
+			case FIELD_INTEGER:		pEntity->KeyValueFromInt( varKey.m_pszString, varValue.m_int ); break;
 			case FIELD_FLOAT:		pEntity->KeyValue( varKey.m_pszString, varValue.m_float ); break;
 			case FIELD_VECTOR:		pEntity->KeyValue( varKey.m_pszString, *varValue.m_pVector ); break;
+			case FIELD_HSCRIPT:
+			{
+				if ( varValue.m_hScript )
+				{
+					// Entity
+					if (ToEnt( varValue.m_hScript ))
+					{
+						pEntity->KeyValue( varKey.m_pszString, STRING( ToEnt( varValue.m_hScript )->GetEntityName() ) );
+					}
+
+					// Color
+					else if (Color *color = HScriptToClass<Color>( varValue.m_hScript ))
+					{
+						char szTemp[64];
+						Q_snprintf( szTemp, sizeof( szTemp ), "%i %i %i %i", color->r(), color->g(), color->b(), color->a() );
+						pEntity->KeyValue( varKey.m_pszString, szTemp );
+					}
+				}
+				break;
+			}
 		}
 
 		g_pScriptVM->ReleaseValue( varKey );
@@ -94,7 +116,7 @@ void PrecacheEntityFromTable( const char *pszClassname, HSCRIPT hKV )
 {
 	if ( IsEntityCreationAllowedInScripts() == false )
 	{
-		Warning( "VScript error: A script attempted to create an entity mid-game. Due to the server's settings, entity creation from scripts is only allowed during map init.\n" );
+		CGWarning( 0, CON_GROUP_VSCRIPT, "VScript error: A script attempted to create an entity mid-game. Due to the server's settings, entity creation from scripts is only allowed during map init.\n" );
 		return;
 	}
 
@@ -118,7 +140,7 @@ HSCRIPT SpawnEntityFromTable( const char *pszClassname, HSCRIPT hKV )
 {
 	if ( IsEntityCreationAllowedInScripts() == false )
 	{
-		Warning( "VScript error: A script attempted to create an entity mid-game. Due to the server's settings, entity creation from scripts is only allowed during map init.\n" );
+		CGWarning( 0, CON_GROUP_VSCRIPT, "VScript error: A script attempted to create an entity mid-game. Due to the server's settings, entity creation from scripts is only allowed during map init.\n" );
 		return NULL;
 	}
 
@@ -143,18 +165,18 @@ HSCRIPT SpawnEntityFromTable( const char *pszClassname, HSCRIPT hKV )
 HSCRIPT EntIndexToHScript( int index )
 {
 #ifdef GAME_DLL
-    edict_t *e = INDEXENT(index);
-    if ( e && !e->IsFree() )
-    {
-        return ToHScript( GetContainingEntity( e ) );
-    }
+	edict_t *e = INDEXENT(index);
+	if ( e && !e->IsFree() )
+	{
+		return ToHScript( GetContainingEntity( e ) );
+	}
 #else // CLIENT_DLL
-    if ( index < NUM_ENT_ENTRIES )
-    {
-        return ToHScript( CBaseEntity::Instance( index ) );
-    }
+	if ( index < NUM_ENT_ENTRIES )
+	{
+		return ToHScript( CBaseEntity::Instance( index ) );
+	}
 #endif
-    return NULL;
+	return NULL;
 }
 
 //-----------------------------------------------------------------------------
@@ -162,6 +184,31 @@ HSCRIPT EntIndexToHScript( int index )
 //-----------------------------------------------------------------------------
 
 #ifndef CLIENT_DLL
+void SaveEntityKVToTable( HSCRIPT hEnt, HSCRIPT hTable )
+{
+	CBaseEntity *pEnt = ToEnt( hEnt );
+	if (pEnt == NULL)
+		return;
+
+	variant_t var; // For Set()
+	ScriptVariant_t varScript, varTable = hTable;
+
+	// loop through the data description list, reading each data desc block
+	for ( datamap_t *dmap = pEnt->GetDataDescMap(); dmap != NULL; dmap = dmap->baseMap )
+	{
+		// search through all the readable fields in the data description, looking for a match
+		for ( int i = 0; i < dmap->dataNumFields; i++ )
+		{
+			if ( dmap->dataDesc[i].flags & (FTYPEDESC_KEY) )
+			{
+				var.Set( dmap->dataDesc[i].fieldType, ((char*)pEnt) + dmap->dataDesc[i].fieldOffset[ TD_OFFSET_NORMAL ] );
+				var.SetScriptVariant( varScript );
+				g_pScriptVM->SetValue( varTable, dmap->dataDesc[i].externalName, varScript );
+			}
+		}
+	}
+}
+
 HSCRIPT SpawnEntityFromKeyValues( const char *pszClassname, HSCRIPT hKV )
 {
 	if ( IsEntityCreationAllowedInScripts() == false )
@@ -279,7 +326,29 @@ BEGIN_SCRIPTDESC_ROOT_NAMED( surfacedata_t, "surfacedata_t", "Handle for accessi
 
 	DEFINE_SCRIPTFUNC( GetJumpFactor, "The surface's jump factor." )
 	DEFINE_SCRIPTFUNC( GetMaterialChar, "The surface's material character." )
+
+	DEFINE_SCRIPTFUNC( GetSoundStepLeft, "The surface's left step sound." )
+	DEFINE_SCRIPTFUNC( GetSoundStepRight, "The surface's right step sound." )
+	DEFINE_SCRIPTFUNC( GetSoundImpactSoft, "The surface's soft impact sound." )
+	DEFINE_SCRIPTFUNC( GetSoundImpactHard, "The surface's hard impact sound." )
+	DEFINE_SCRIPTFUNC( GetSoundScrapeSmooth, "The surface's smooth scrape sound." )
+	DEFINE_SCRIPTFUNC( GetSoundScrapeRough, "The surface's rough scrape sound." )
+	DEFINE_SCRIPTFUNC( GetSoundBulletImpact, "The surface's bullet impact sound." )
+	DEFINE_SCRIPTFUNC( GetSoundRolling, "The surface's rolling sound." )
+	DEFINE_SCRIPTFUNC( GetSoundBreak, "The surface's break sound." )
+	DEFINE_SCRIPTFUNC( GetSoundStrain, "The surface's strain sound." )
 END_SCRIPTDESC();
+
+const char*		surfacedata_t::GetSoundStepLeft() { return physprops->GetString( sounds.stepleft ); }
+const char*		surfacedata_t::GetSoundStepRight() { return physprops->GetString( sounds.stepright ); }
+const char*		surfacedata_t::GetSoundImpactSoft() { return physprops->GetString( sounds.impactSoft ); }
+const char*		surfacedata_t::GetSoundImpactHard() { return physprops->GetString( sounds.impactHard ); }
+const char*		surfacedata_t::GetSoundScrapeSmooth() { return physprops->GetString( sounds.scrapeSmooth ); }
+const char*		surfacedata_t::GetSoundScrapeRough() { return physprops->GetString( sounds.scrapeRough ); }
+const char*		surfacedata_t::GetSoundBulletImpact() { return physprops->GetString( sounds.bulletImpact ); }
+const char*		surfacedata_t::GetSoundRolling() { return physprops->GetString( sounds.rolling ); }
+const char*		surfacedata_t::GetSoundBreak() { return physprops->GetString( sounds.breakSound ); }
+const char*		surfacedata_t::GetSoundStrain() { return physprops->GetString( sounds.strainSound ); }
 
 BEGIN_SCRIPTDESC_ROOT_NAMED( CSurfaceScriptAccessor, "csurface_t", "Handle for accessing csurface_t info." )
 	DEFINE_SCRIPTFUNC( Name, "The surface's name." )
@@ -431,6 +500,61 @@ static void DestroyFireBulletsInfo( HSCRIPT hBulletsInfo )
 FireBulletsInfo_t *GetFireBulletsInfoFromInfo( HSCRIPT hBulletsInfo )
 {
 	return HScriptToClass<FireBulletsInfo_t>( hBulletsInfo );
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+CAnimEventTInstanceHelper g_AnimEventTInstanceHelper;
+
+BEGIN_SCRIPTDESC_ROOT( animevent_t, "Handle for accessing animevent_t info." )
+	DEFINE_SCRIPT_INSTANCE_HELPER( &g_AnimEventTInstanceHelper )
+END_SCRIPTDESC();
+
+bool CAnimEventTInstanceHelper::Get( void *p, const char *pszKey, ScriptVariant_t &variant )
+{
+	animevent_t *ani = ((animevent_t *)p);
+	if (FStrEq( pszKey, "event" ))
+		variant = ani->event;
+	else if (FStrEq( pszKey, "options" ))
+		variant = ani->options;
+	else if (FStrEq( pszKey, "cycle" ))
+		variant = ani->cycle;
+	else if (FStrEq( pszKey, "eventtime" ))
+		variant = ani->eventtime;
+	else if (FStrEq( pszKey, "type" ))
+		variant = ani->type;
+	else if (FStrEq( pszKey, "source" ))
+		variant = ToHScript(ani->pSource);
+	else
+		return false;
+
+	return true;
+}
+
+bool CAnimEventTInstanceHelper::Set( void *p, const char *pszKey, ScriptVariant_t &variant )
+{
+	animevent_t *ani = ((animevent_t *)p);
+	if (FStrEq( pszKey, "event" ))
+		ani->event = variant;
+	else if (FStrEq( pszKey, "options" ))
+		ani->options = variant;
+	else if (FStrEq( pszKey, "cycle" ))
+		ani->cycle = variant;
+	else if (FStrEq( pszKey, "eventtime" ))
+		ani->eventtime = variant;
+	else if (FStrEq( pszKey, "type" ))
+		ani->type = variant;
+	else if (FStrEq( pszKey, "source" ))
+	{
+		CBaseEntity *pEnt = ToEnt( variant.m_hScript );
+		if (pEnt)
+			ani->pSource = pEnt->GetBaseAnimating();
+	}
+	else
+		return false;
+
+	return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -672,19 +796,28 @@ void NPrint( int pos, const char* fmt )
 
 void NXPrint( int pos, int r, int g, int b, bool fixed, float ftime, const char* fmt )
 {
-	static con_nprint_t *info = new con_nprint_t;
+	con_nprint_t info;
 
-	info->index = pos;
-	info->time_to_live = ftime;
-	info->color[0] = r / 255.f;
-	info->color[1] = g / 255.f;
-	info->color[2] = b / 255.f;
-	info->fixed_width_font = fixed;
+	info.index = pos;
+	info.time_to_live = ftime;
+	info.color[0] = r / 255.f;
+	info.color[1] = g / 255.f;
+	info.color[2] = b / 255.f;
+	info.fixed_width_font = fixed;
 
-	engine->Con_NXPrintf(info, fmt);
-
-	// delete info;
+	engine->Con_NXPrintf( &info, fmt );
 }
+
+static float IntervalPerTick()
+{
+	return gpGlobals->interval_per_tick;
+}
+
+static int GetFrameCount()
+{
+	return gpGlobals->framecount;
+}
+
 
 //=============================================================================
 //=============================================================================
@@ -717,6 +850,7 @@ void RegisterSharedScriptFunctions()
 	ScriptRegisterFunction( g_pScriptVM, NXPrint, "Notification print, customised" );
 
 #ifndef CLIENT_DLL
+	ScriptRegisterFunction( g_pScriptVM, SaveEntityKVToTable, "Saves an entity's keyvalues to a table." );
 	ScriptRegisterFunction( g_pScriptVM, SpawnEntityFromKeyValues, "Spawns an entity with the keyvalues in a CScriptKeyValues handle." );
 	ScriptRegisterFunctionNamed( g_pScriptVM, ScriptDispatchSpawn, "DispatchSpawn", "Spawns an unspawned entity." );
 #endif
@@ -781,12 +915,9 @@ void RegisterSharedScriptFunctions()
 #endif
 	ScriptRegisterFunctionNamed( g_pScriptVM, ScriptIsServer, "IsServer", "Returns true if the script is being run on the server." );
 	ScriptRegisterFunctionNamed( g_pScriptVM, ScriptIsClient, "IsClient", "Returns true if the script is being run on the client." );
+	ScriptRegisterFunction( g_pScriptVM, IntervalPerTick, "Simulation tick interval" );
+	ScriptRegisterFunction( g_pScriptVM, GetFrameCount, "Absolute frame counter" );
+	//ScriptRegisterFunction( g_pScriptVM, GetTickCount, "Simulation ticks" );
 
 	RegisterScriptSingletons();
-
-#ifdef CLIENT_DLL
-	VScriptRunScript( "vscript_client", true );
-#else
-	VScriptRunScript( "vscript_server", true );
-#endif
 }

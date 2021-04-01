@@ -338,6 +338,16 @@ struct thinkfunc_t
 	DECLARE_SIMPLE_DATADESC();
 };
 
+#ifdef MAPBASE_VSCRIPT
+struct scriptthinkfunc_t
+{
+	int				m_nNextThinkTick;
+	HSCRIPT			m_hfnThink;
+	unsigned short	m_iContextHash;
+	bool			m_bNoParam;
+};
+#endif
+
 struct EmitSound_t;
 struct rotatingpushmove_t;
 
@@ -671,6 +681,8 @@ public:
 	bool ScriptAcceptInput(const char *szInputName, const char *szValue, HSCRIPT hActivator, HSCRIPT hCaller);
 #endif
 
+	bool ScriptInputHook( const char *szInputName, CBaseEntity *pActivator, CBaseEntity *pCaller, variant_t Value, ScriptVariant_t &functionReturn );
+
 	//
 	// Input handlers.
 	//
@@ -750,6 +762,8 @@ public:
 	void InputRemoveEffects( inputdata_t &inputdata );
 	void InputDrawEntity( inputdata_t &inputdata );
 	void InputUndrawEntity( inputdata_t &inputdata );
+	void InputEnableReceivingFlashlight( inputdata_t &inputdata );
+	void InputDisableReceivingFlashlight( inputdata_t &inputdata );
 	void InputAddEFlags( inputdata_t &inputdata );
 	void InputRemoveEFlags( inputdata_t &inputdata );
 	void InputAddSolidFlags( inputdata_t &inputdata );
@@ -916,6 +930,9 @@ public:
 	// 
 	// This was partly inspired by Underhell's keyvalue that allows entities to only render in mirrors and cameras.
 	CNetworkVar( int, m_iViewHideFlags );
+
+	// Disables receiving projected textures. Based on a keyvalue from later Source games.
+	CNetworkVar( bool, m_bDisableFlashlight );
 #endif
 
 	// was pev->rendercolor
@@ -982,6 +999,7 @@ public:
 	bool	HasContext( string_t name, string_t value ) const; // NOTE: string_t version only compares pointers!
 	bool	HasContext( const char *nameandvalue ) const;
 	const char *GetContextValue( const char *contextName ) const;
+	float	GetContextExpireTime( const char *name );
 	void	RemoveContext( const char *nameandvalue );
 	void	AddContext( const char *name, const char *value, float duration = 0.0f );
 #endif
@@ -1327,7 +1345,9 @@ public:
 	// 
 	// Also, keep in mind pretty much all existing DispatchInteraction() calls are only performed on CBaseCombatCharacters.
 	// You'll need to change their code manually if you want other, non-character entities to use the interaction.
-	bool				DispatchInteraction( int interactionType, void *data, CBaseCombatCharacter* sourceEnt )	{ return ( interactionType > 0 ) ? HandleInteraction( interactionType, data, sourceEnt ) : false; }
+	bool				DispatchInteraction( int interactionType, void *data, CBaseCombatCharacter* sourceEnt );
+
+	// Do not call HandleInteraction directly, use DispatchInteraction
 	virtual bool		HandleInteraction( int interactionType, void *data, CBaseCombatCharacter* sourceEnt ) { return false; }
 #endif
 
@@ -1983,11 +2003,12 @@ public:
 #ifdef MAPBASE_VSCRIPT
 	void ScriptSetThinkFunction(const char *szFunc, float time);
 	void ScriptStopThinkFunction();
-	void ScriptSetThink(HSCRIPT hFunc, float time);
+	void ScriptSetContextThink( const char* szContext, HSCRIPT hFunc, float time );
+	void ScriptSetThink( HSCRIPT hFunc, float time );
 	void ScriptStopThink();
-	void ScriptThinkH();
+	void ScriptContextThink();
 private:
-	HSCRIPT m_hfnThink;
+	CUtlVector< scriptthinkfunc_t* > m_ScriptThinkFuncs;
 public:
 #endif
 	const char* GetScriptId();
@@ -2018,8 +2039,10 @@ public:
 	const Vector& ScriptGetAngles(void) { static Vector vec; QAngle qa = GetAbsAngles(); vec.x = qa.x; vec.y = qa.y; vec.z = qa.z; return vec; }
 #endif
 
+#ifndef MAPBASE_VSCRIPT
 	void ScriptSetSize(const Vector& mins, const Vector& maxs) { UTIL_SetSize(this, mins, maxs); }
 	void ScriptUtilRemove(void) { UTIL_Remove(this); }
+#endif
 	void ScriptSetOwner(HSCRIPT hEntity) { SetOwnerEntity(ToEnt(hEntity)); }
 	void ScriptSetOrigin(const Vector& v) { Teleport(&v, NULL, NULL); }
 	void ScriptSetForward(const Vector& v) { QAngle angles; VectorAngles(v, angles); Teleport(NULL, &angles, NULL); }
@@ -2045,6 +2068,7 @@ public:
 	const char* ScriptGetModelName(void) const;
 	HSCRIPT ScriptGetModelKeyValues(void);
 
+	void ScriptStopSound(const char* soundname);
 	void ScriptEmitSound(const char* soundname);
 	float ScriptSoundDuration(const char* soundname, const char* actormodel);
 
@@ -2066,6 +2090,7 @@ public:
 
 	void ScriptAddContext( const char *name, const char *value, float duration = 0.0f );
 	const char *ScriptGetContext( const char *name );
+	HSCRIPT ScriptGetContextIndex( int index );
 
 	int ScriptClassify(void);
 
@@ -2090,10 +2115,16 @@ public:
 	int ScriptGetMoveType() { return GetMoveType(); }
 	void ScriptSetMoveType( int iMoveType ) { SetMoveType( (MoveType_t)iMoveType ); }
 
+	bool ScriptDispatchInteraction( int interactionType, HSCRIPT data, HSCRIPT sourceEnt );
+
+	int ScriptGetTakeDamage() { return m_takedamage; }
+	void ScriptSetTakeDamage( int val ) { m_takedamage = val; }
+
 	static ScriptHook_t	g_Hook_UpdateOnRemove;
 	static ScriptHook_t	g_Hook_VPhysicsCollision;
 	static ScriptHook_t	g_Hook_FireBullets;
 	static ScriptHook_t	g_Hook_OnDeath;
+	static ScriptHook_t	g_Hook_HandleInteraction;
 #endif
 
 	string_t		m_iszVScripts;

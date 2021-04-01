@@ -106,7 +106,7 @@ public:
 	bool StartSolid() const { return m_tr.startsolid; }
 
 	HSCRIPT Surface() { return m_surfaceAccessor; }
-	void SetSurface( HSCRIPT hPlaneAccessor ) { m_surfaceAccessor = hPlaneAccessor; }
+	void SetSurface( HSCRIPT hSurfAccessor ) { m_surfaceAccessor = hSurfAccessor; }
 
 	HSCRIPT Plane() { return m_planeAccessor; }
 	void SetPlane( HSCRIPT hPlaneAccessor ) { m_planeAccessor = hPlaneAccessor; }
@@ -119,6 +119,15 @@ private:
 
 	HSCRIPT m_surfaceAccessor;
 	HSCRIPT m_planeAccessor;
+};
+
+//-----------------------------------------------------------------------------
+// Exposes animevent_t to VScript
+//-----------------------------------------------------------------------------
+class CAnimEventTInstanceHelper : public IScriptInstanceHelper
+{
+	bool Get( void *p, const char *pszKey, ScriptVariant_t &variant );
+	bool Set( void *p, const char *pszKey, ScriptVariant_t &variant );
 };
 
 #endif

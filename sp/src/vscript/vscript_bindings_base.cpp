@@ -26,6 +26,8 @@
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
+extern IScriptManager *scriptmanager;
+
 //=============================================================================
 //
 // Prints
@@ -48,100 +50,6 @@ static void ScriptColorPrintL( int r, int g, int b, const char *pszMsg )
 	ConColorMsg( clr, "%s\n", pszMsg );
 }
 
-//=============================================================================
-//
-// Convar Lookup
-// 
-//=============================================================================
-class CScriptConvarLookup
-{
-public:
-
-	float GetFloat( const char *pszConVar )
-	{
-		ConVarRef cvar( pszConVar );
-		return cvar.GetFloat();
-	}
-
-	int GetInt( const char *pszConVar )
-	{
-		ConVarRef cvar( pszConVar );
-		return cvar.GetInt();
-	}
-
-	bool GetBool( const char *pszConVar )
-	{
-		ConVarRef cvar( pszConVar );
-		return cvar.GetBool();
-	}
-
-	const char *GetStr( const char *pszConVar )
-	{
-		ConVarRef cvar( pszConVar );
-		return cvar.GetString();
-	}
-
-	const char *GetDefaultValue( const char *pszConVar )
-	{
-		ConVarRef cvar( pszConVar );
-		return cvar.GetDefault();
-	}
-
-	bool IsFlagSet( const char *pszConVar, int nFlags )
-	{
-		ConVarRef cvar( pszConVar );
-		return cvar.IsFlagSet( nFlags );
-	}
-
-	void SetFloat( const char *pszConVar, float value )
-	{
-		SetValue( pszConVar, value );
-	}
-
-	void SetInt( const char *pszConVar, int value )
-	{
-		SetValue( pszConVar, value );
-	}
-
-	void SetBool( const char *pszConVar, bool value )
-	{
-		SetValue( pszConVar, value );
-	}
-
-	void SetStr( const char *pszConVar, const char *value )
-	{
-		SetValue( pszConVar, value );
-	}
-
-	template <typename T>
-	void SetValue( const char *pszConVar, T value )
-	{
-		ConVarRef cvar( pszConVar );
-		if (!cvar.IsValid())
-			return;
-
-		// FCVAR_NOT_CONNECTED can be used to protect specific convars from nefarious interference
-		if (cvar.IsFlagSet(FCVAR_NOT_CONNECTED))
-			return;
-
-		cvar.SetValue( value );
-	}
-
-private:
-} g_ScriptConvarLookup;
-
-BEGIN_SCRIPTDESC_ROOT_NAMED( CScriptConvarLookup, "CConvars", SCRIPT_SINGLETON "Provides an interface for getting and setting convars." )
-	DEFINE_SCRIPTFUNC( GetFloat, "Returns the convar as a float. May return null if no such convar." )
-	DEFINE_SCRIPTFUNC( GetInt, "Returns the convar as an int. May return null if no such convar." )
-	DEFINE_SCRIPTFUNC( GetBool, "Returns the convar as a bool. May return null if no such convar." )
-	DEFINE_SCRIPTFUNC( GetStr, "Returns the convar as a string. May return null if no such convar." )
-	DEFINE_SCRIPTFUNC( GetDefaultValue, "Returns the convar's default value as a string. May return null if no such convar." )
-	DEFINE_SCRIPTFUNC( IsFlagSet, "Returns the convar's flags. May return null if no such convar." )
-	DEFINE_SCRIPTFUNC( SetFloat, "Sets the value of the convar as a float." )
-	DEFINE_SCRIPTFUNC( SetInt, "Sets the value of the convar as an int." )
-	DEFINE_SCRIPTFUNC( SetBool, "Sets the value of the convar as a bool." )
-	DEFINE_SCRIPTFUNC( SetStr, "Sets the value of the convar as a string." )
-END_SCRIPTDESC();
 
 //=============================================================================
 //
@@ -201,6 +109,9 @@ BEGIN_SCRIPTDESC_ROOT( CScriptKeyValues, "Wrapper class over KeyValues instance"
 	DEFINE_SCRIPTFUNC_NAMED( ScriptReleaseKeyValues, "ReleaseKeyValues", "Given a root KeyValues object, release its contents" );
 
 	DEFINE_SCRIPTFUNC( TableToSubKeys, "Converts a script table to KeyValues." );
+	DEFINE_SCRIPTFUNC( SubKeysToTable, "Converts to script table." );
+
+	DEFINE_SCRIPTFUNC_NAMED( ScriptFindOrCreateKey, "FindOrCreateKey", "Given a KeyValues object and a key name, find or create a KeyValues object associated with the key name" );
 
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetName, "GetName", "Given a KeyValues object, return its name" );
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetInt, "GetInt", "Given a KeyValues object, return its own associated integer value" );
@@ -315,6 +226,32 @@ void CScriptKeyValues::TableToSubKeys( HSCRIPT hTable )
 	}
 }
 
+void CScriptKeyValues::SubKeysToTable( HSCRIPT hTable )
+{
+	FOR_EACH_SUBKEY( m_pKeyValues, key )
+	{
+		switch ( key->GetDataType() )
+		{
+			case KeyValues::TYPE_STRING: g_pScriptVM->SetValue( hTable, key->GetName(), key->GetString() ); break;
+			case KeyValues::TYPE_INT:    g_pScriptVM->SetValue( hTable, key->GetName(), key->GetInt()    ); break;
+			case KeyValues::TYPE_FLOAT:  g_pScriptVM->SetValue( hTable, key->GetName(), key->GetFloat()  ); break;
+		}
+	}
+}
+
+HSCRIPT CScriptKeyValues::ScriptFindOrCreateKey( const char *pszName )
+{
+	KeyValues *pKeyValues = m_pKeyValues->FindKey(pszName, true);
+	if ( pKeyValues == NULL )
+		return NULL;
+
+	CScriptKeyValues *pScriptKey = new CScriptKeyValues( pKeyValues );
+
+	// UNDONE: who calls ReleaseInstance on this??
+	HSCRIPT hScriptInstance = g_pScriptVM->RegisterInstance( pScriptKey );
+	return hScriptInstance;
+}
+
 const char *CScriptKeyValues::ScriptGetName()
 {
 	const char *psz = m_pKeyValues->GetName();
@@ -397,7 +334,7 @@ CScriptKeyValues::CScriptKeyValues( KeyValues *pKeyValues = NULL )
 {
 	if (pKeyValues == NULL)
 	{
-		m_pKeyValues = new KeyValues("");
+		m_pKeyValues = new KeyValues("CScriptKeyValues");
 	}
 	else
 	{
@@ -416,6 +353,90 @@ CScriptKeyValues::~CScriptKeyValues( )
 }
 
 //=============================================================================
+//
+// matrix3x4_t
+// 
+//=============================================================================
+CScriptColorInstanceHelper g_ColorScriptInstanceHelper;
+
+BEGIN_SCRIPTDESC_ROOT( Color, "" )
+
+	DEFINE_SCRIPT_CONSTRUCTOR()
+	DEFINE_SCRIPT_INSTANCE_HELPER( &g_ColorScriptInstanceHelper )
+
+	DEFINE_SCRIPTFUNC( SetColor, "Sets the color." )
+
+	DEFINE_SCRIPTFUNC( SetRawColor, "Sets the raw color integer." )
+	DEFINE_SCRIPTFUNC( GetRawColor, "Gets the raw color integer." )
+
+	DEFINE_MEMBERVAR( "r", FIELD_CHARACTER, "Member variable for red." )
+	DEFINE_MEMBERVAR( "g", FIELD_CHARACTER, "Member variable for green." )
+	DEFINE_MEMBERVAR( "b", FIELD_CHARACTER, "Member variable for blue." )
+	DEFINE_MEMBERVAR( "a", FIELD_CHARACTER, "Member variable for alpha. (transparency)" )
+
+END_SCRIPTDESC();
+
+//-----------------------------------------------------------------------------
+
+bool CScriptColorInstanceHelper::ToString( void *p, char *pBuf, int bufSize )
+{
+	Color *pClr = ((Color *)p);
+	V_snprintf( pBuf, bufSize, "(color: (%i, %i, %i, %i))", pClr->r(), pClr->g(), pClr->b(), pClr->a() );
+	return true; 
+}
+
+bool CScriptColorInstanceHelper::Get( void *p, const char *pszKey, ScriptVariant_t &variant )
+{
+	Color *pClr = ((Color *)p);
+	if ( strlen(pszKey) == 1 )
+	{
+		switch (pszKey[0])
+		{
+			case 'r':
+				variant = pClr->r();
+				return true;
+			case 'g':
+				variant = pClr->g();
+				return true;
+			case 'b':
+				variant = pClr->b();
+				return true;
+			case 'a':
+				variant = pClr->a();
+				return true;
+		}
+	}
+	return false;
+}
+
+bool CScriptColorInstanceHelper::Set( void *p, const char *pszKey, ScriptVariant_t &variant )
+{
+	Color *pClr = ((Color *)p);
+	if ( strlen(pszKey) == 1 )
+	{
+		int iVal;
+		variant.AssignTo( &iVal );
+		switch (pszKey[0])
+		{
+			// variant.AssignTo( &(*pClr)[0] );
+			case 'r':
+				(*pClr)[0] = iVal;
+				return true;
+			case 'g':
+				(*pClr)[1] = iVal;
+				return true;
+			case 'b':
+				(*pClr)[2] = iVal;
+				return true;
+			case 'a':
+				(*pClr)[3] = iVal;
+				return true;
+		}
+	}
+	return false;
+}
+
+//=============================================================================
 //=============================================================================
 
 void RegisterBaseBindings( IScriptVM *pVM )
@@ -428,12 +449,13 @@ void RegisterBaseBindings( IScriptVM *pVM )
 
 	//-----------------------------------------------------------------------------
 
-	pVM->RegisterInstance( &g_ScriptConvarLookup, "Convars" );
 	pVM->RegisterInstance( &g_ScriptGlobalSys, "GlobalSys" );
 
 	//-----------------------------------------------------------------------------
 
 	pVM->RegisterClass( GetScriptDescForClass( CScriptKeyValues ) );
+
+	pVM->RegisterClass( GetScriptDescForClass( Color ) );
 
 	//-----------------------------------------------------------------------------
 

@@ -98,6 +98,11 @@ extern bool AIStrongOpt( void );
 #ifdef MAPBASE
 // Defines Mapbase's extended NPC response system usage.
 #define EXPANDED_RESPONSE_SYSTEM_USAGE
+
+// Use the model keyvalue if it is defined
+#define DefaultOrCustomModel(defaultModel) GetModelName() != NULL_STRING ? STRING(GetModelName()) : defaultModel
+#else
+#define DefaultOrCustomModel() defaultModel
 #endif
 
 #ifdef EXPANDED_RESPONSE_SYSTEM_USAGE
@@ -1224,6 +1229,12 @@ public:
 
 	int					VScriptGetState();
 
+	void				VScriptWake( HSCRIPT hActivator ) { Wake( ToEnt(hActivator) ); }
+	void				VScriptSleep() { Sleep(); }
+
+	int					VScriptGetSleepState()	{ return (int)GetSleepState(); }
+	void				VScriptSetSleepState( int sleepState ) { SetSleepState( (AI_SleepState_t)sleepState ); }
+
 	const char*			VScriptGetHintGroup() { return STRING( GetHintGroup() ); }
 	HSCRIPT				VScriptGetHintNode();
 
@@ -1231,6 +1242,8 @@ public:
 	int					ScriptGetActivityID() { return GetActivity(); }
 	void				ScriptSetActivity( const char *szActivity ) { SetActivity( (Activity)GetActivityID( szActivity ) ); }
 	void				ScriptSetActivityID( int iActivity ) { SetActivity((Activity)iActivity); }
+	int					ScriptTranslateActivity( const char *szActivity ) { return TranslateActivity( (Activity)GetActivityID( szActivity ) ); }
+	int					ScriptTranslateActivityID( int iActivity ) { return TranslateActivity( (Activity)iActivity ); }
 
 	const char*			VScriptGetSchedule();
 	int					VScriptGetScheduleID();
@@ -2298,6 +2311,15 @@ public:
 	CUtlVector<AIScheduleChoice_t>	m_ScheduleHistory;
 #endif//AI_MONITOR_FOR_OSCILLATION
 
+#ifdef MAPBASE_VSCRIPT
+	static ScriptHook_t	g_Hook_QueryHearSound;
+	static ScriptHook_t	g_Hook_QuerySeeEntity;
+	static ScriptHook_t	g_Hook_TranslateActivity;
+	static ScriptHook_t	g_Hook_TranslateSchedule;
+	static ScriptHook_t	g_Hook_GetActualShootPosition;
+	static ScriptHook_t	g_Hook_OverrideMove;
+#endif
+
 private:
 
 	// Break into pieces!
@@ -2893,7 +2915,11 @@ public:
 	derivedClass::AccessClassScheduleIdSpaceDirect().Init( #derivedClass, BaseClass::GetSchedulingSymbols(), &BaseClass::AccessClassScheduleIdSpaceDirect() ); \
 	derivedClass::gm_SquadSlotIdSpace.Init( &CAI_BaseNPC::gm_SquadSlotNamespace, &BaseClass::gm_SquadSlotIdSpace);
 
+#ifdef MAPBASE
+#define ADD_CUSTOM_INTERACTION( interaction )	{ CBaseCombatCharacter::AddInteractionWithString( interaction, #interaction ); }
+#else
 #define	ADD_CUSTOM_INTERACTION( interaction )	{ interaction = CBaseCombatCharacter::GetInteractionID(); }
+#endif
 
 #define ADD_CUSTOM_SQUADSLOT_NAMED(derivedClass,squadSlotName,squadSlotEN)\
 	if ( !derivedClass::gm_SquadSlotIdSpace.AddSymbol( squadSlotName, squadSlotEN, "squadslot", derivedClass::gm_pszErrorClassName ) ) return;

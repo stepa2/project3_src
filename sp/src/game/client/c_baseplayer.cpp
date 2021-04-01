@@ -331,6 +331,8 @@ END_RECV_TABLE()
 
 		RecvPropString( RECVINFO(m_szLastPlaceName) ),
 
+		RecvPropEHandle(RECVINFO(m_hPostProcessCtrl)),		// Send to everybody - for spectating
+
 #if defined USES_ECON_ITEMS
 		RecvPropUtlVector( RECVINFO_UTLVECTOR( m_hMyWearables ), MAX_WEARABLES_SENT_FROM_SERVER,	RecvPropEHandle(NULL, 0, 0) ),
 #endif
@@ -490,14 +492,14 @@ C_BasePlayer::~C_BasePlayer()
 	if ( this == s_pLocalPlayer )
 	{
 		s_pLocalPlayer = NULL;
-	}
 
 #ifdef MAPBASE_VSCRIPT
-	if ( IsLocalPlayer() && g_pScriptVM )
-	{
-		g_pScriptVM->SetValue( "player", SCRIPT_VARIANT_NULL );
-	}
+		if ( g_pScriptVM )
+		{
+			g_pScriptVM->SetValue( "player", SCRIPT_VARIANT_NULL );
+		}
 #endif
+	}
 
 	delete m_pFlashlight;
 }
@@ -853,6 +855,14 @@ void C_BasePlayer::PostDataUpdate( DataUpdateType_t updateType )
 			// changed level, which would cause the snd_soundmixer to be left modified.
 			ConVar *pVar = (ConVar *)cvar->FindVar( "snd_soundmixer" );
 			pVar->Revert();
+
+#ifdef MAPBASE_VSCRIPT
+			// Moved here from LevelInitPostEntity, which is executed before local player is spawned.
+			if ( g_pScriptVM )
+			{
+				g_pScriptVM->SetValue( "player", GetScriptInstance() );
+			}
+#endif
 		}
 	}
 
@@ -2905,6 +2915,14 @@ void C_BasePlayer::UpdateFogBlend( void )
 				
 		}
 	}
+}
+
+//-----------------------------------------------------------------------------
+//
+//-----------------------------------------------------------------------------
+C_PostProcessController* C_BasePlayer::GetActivePostProcessController() const
+{
+	return m_hPostProcessCtrl.Get();
 }
 
 //-----------------------------------------------------------------------------

@@ -267,6 +267,26 @@ struct ScriptFuncDescriptor_t
 	CUtlVector<ScriptDataType_t> m_Parameters;
 };
 
+#ifdef MAPBASE_VSCRIPT
+//---------------------------------------------------------
+// VScript Member Variables
+// 
+// An odd concept. Because IScriptInstanceHelper now supports
+// get/set metamethods, classes are capable of pretending they
+// have member variables which VScript can get and set.
+// 
+// There's no default way of documenting these variables, so even though
+// these are not actually binding anything, this is here to allow VScript
+// to describe these fake member variables in its documentation.
+//---------------------------------------------------------
+struct ScriptMemberDesc_t
+{
+	const char			*m_pszScriptName;
+	const char			*m_pszDescription;
+	ScriptDataType_t	m_ReturnType;
+};
+#endif
+
 
 //---------------------------------------------------------
 
@@ -338,6 +358,7 @@ struct ScriptClassDesc_t
 
 #ifdef MAPBASE_VSCRIPT
 	CUtlVector<ScriptHook_t*>			m_Hooks;
+	CUtlVector<ScriptMemberDesc_t>		m_Members;
 #endif
 
 	void *(*m_pfnConstruct)();
@@ -674,29 +695,16 @@ struct ScriptEnumDesc_t
 #define BEGIN_SCRIPTDESC( className, baseClass, description )								BEGIN_SCRIPTDESC_NAMED( className, baseClass, #className, description )
 #define BEGIN_SCRIPTDESC_ROOT( className, description )										BEGIN_SCRIPTDESC_ROOT_NAMED( className, #className, description )
 
-#ifdef MSVC
-	#define DEFINE_SCRIPTDESC_FUNCTION( className, baseClass ) \
-		ScriptClassDesc_t * GetScriptDesc( className * )
-#else
-	#define DEFINE_SCRIPTDESC_FUNCTION( className, baseClass ) \
-		template <> ScriptClassDesc_t * GetScriptDesc<baseClass>( baseClass *); \
-		template <> ScriptClassDesc_t * GetScriptDesc<className>( className *)
-#endif
-
 #define BEGIN_SCRIPTDESC_NAMED( className, baseClass, scriptName, description ) \
-	ScriptClassDesc_t g_##className##_ScriptDesc; \
-	DEFINE_SCRIPTDESC_FUNCTION( className, baseClass ) \
+	template <> ScriptClassDesc_t* GetScriptDesc<baseClass>(baseClass*); \
+	template <> ScriptClassDesc_t* GetScriptDesc<className>(className*); \
+	ScriptClassDesc_t & g_##className##_ScriptDesc = *GetScriptDesc<className>(nullptr); \
+	template <> ScriptClassDesc_t* GetScriptDesc<className>(className*) \
 	{ \
-		static bool bInitialized; \
-		if ( bInitialized ) \
-		{ \
-			return &g_##className##_ScriptDesc; \
-		} \
-		\
-		bInitialized = true; \
-		\
+		static ScriptClassDesc_t g_##className##_ScriptDesc; \
 		typedef className _className; \
 		ScriptClassDesc_t *pDesc = &g_##className##_ScriptDesc; \
+		if (pDesc->m_pszClassname) return pDesc; \
 		pDesc->m_pszDescription = description; \
 		ScriptInitClassDescNamed( pDesc, className, GetScriptDescForClass( baseClass ), scriptName ); \
 		ScriptClassDesc_t *pInstanceHelperBase = pDesc->m_pBaseDesc; \
@@ -744,6 +752,9 @@ struct ScriptEnumDesc_t
 #define END_SCRIPTHOOK() \
 		pDesc->m_Hooks.AddToTail(pHook); \
 	}
+
+#define DEFINE_MEMBERVAR( varName, returnType, description ) \
+	do { ScriptMemberDesc_t *pBinding = &((pDesc)->m_Members[(pDesc)->m_Members.AddToTail()]); pBinding->m_pszScriptName = varName; pBinding->m_pszDescription = description; pBinding->m_ReturnType = returnType; } while (0);
 #endif
 
 template <typename T> ScriptClassDesc_t *GetScriptDesc(T *);
@@ -908,6 +919,9 @@ public:
 	virtual bool SetValue( HSCRIPT hScope, const char *pszKey, const char *pszValue ) = 0;
 	virtual bool SetValue( HSCRIPT hScope, const char *pszKey, const ScriptVariant_t &value ) = 0;
 	bool SetValue( const char *pszKey, const ScriptVariant_t &value )																{ return SetValue(NULL, pszKey, value ); }
+#ifdef MAPBASE_VSCRIPT
+	virtual bool SetValue( HSCRIPT hScope, const ScriptVariant_t& key, const ScriptVariant_t& val ) = 0;
+#endif
 
 	virtual void CreateTable( ScriptVariant_t &Table ) = 0;
 	virtual int	GetNumTableEntries( HSCRIPT hScope ) = 0;
@@ -915,13 +929,19 @@ public:
 
 	virtual bool GetValue( HSCRIPT hScope, const char *pszKey, ScriptVariant_t *pValue ) = 0;
 	bool GetValue( const char *pszKey, ScriptVariant_t *pValue )																	{ return GetValue(NULL, pszKey, pValue ); }
+#ifdef MAPBASE_VSCRIPT
+	virtual bool GetValue( HSCRIPT hScope, ScriptVariant_t key, ScriptVariant_t* pValue ) = 0;
+#endif
 	virtual void ReleaseValue( ScriptVariant_t &value ) = 0;
 
 	virtual bool ClearValue( HSCRIPT hScope, const char *pszKey ) = 0;
 	bool ClearValue( const char *pszKey)																							{ return ClearValue( NULL, pszKey ); }
+#ifdef MAPBASE_VSCRIPT
+	virtual bool ClearValue( HSCRIPT hScope, ScriptVariant_t pKey ) = 0;
+#endif
 
 #ifdef MAPBASE_VSCRIPT
-	// virtual void CreateArray(ScriptVariant_t &arr, int size = 0) = 0;
+	virtual void CreateArray(ScriptVariant_t &arr, int size = 0) = 0;
 	virtual bool ArrayAppend(HSCRIPT hArray, const ScriptVariant_t &val) = 0;
 #endif
 
@@ -1579,8 +1599,6 @@ struct ScriptHook_t
 	{
 		extern IScriptVM *g_pScriptVM;
 
-		Assert( ARRAYSIZE(pArgs) == m_desc.m_Parameters.Count() );
-
 		// Make sure we have a function in this scope
 		if (!m_hFunc && !CanRunInScope(hScope))
 			return false;
@@ -1638,6 +1656,7 @@ public:
 		if ( !m_hScriptFunc_##FuncName.IsNull() ) \
 		{ \
 			ScriptVariant_t returnVal; \
+			Assert( N == m_desc.m_Parameters.Count() ); \
 			ScriptStatus_t result = Call( m_hScriptFunc_##FuncName.hFunction, &returnVal, FUNC_CALL_ARGS_##N ); \
 			if ( result != SCRIPT_ERROR ) \
 			{ \
@@ -1662,6 +1681,7 @@ public:
 		\
 		if ( !m_hScriptFunc_##FuncName.IsNull() ) \
 		{ \
+			Assert( N == m_desc.m_Parameters.Count() ); \
 			ScriptStatus_t result = Call( m_hScriptFunc_##FuncName.hFunction, NULL, FUNC_CALL_ARGS_##N ); \
 			if ( result != SCRIPT_ERROR ) \
 			{ \
